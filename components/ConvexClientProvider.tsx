@@ -7,6 +7,17 @@ import { ReactNode } from "react";
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
-  return <ConvexAuthProvider client={convex}>{children}</ConvexAuthProvider>;
+  // Use the Convex deployment URL with .site domain for OAuth storage namespace
+  // This ensures localStorage keys match the OAuth callback domain
+  const storageNamespace = process.env.NEXT_PUBLIC_CONVEX_URL!.replace('.cloud', '.site');
+
+  return (
+    <ConvexAuthProvider
+      client={convex}
+      storageNamespace={storageNamespace}
+    >
+      {children}
+    </ConvexAuthProvider>
+  );
 }
 

@@ -9,20 +9,27 @@ const schema = defineSchema({
 
   // Users table - extends auth with additional profile info
   users: defineTable({
+    // Fields from authTables (required by Convex Auth)
     name: v.optional(v.string()),
-    email: v.optional(v.string()),
     image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    // Custom fields for Agent Battler
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
     githubAccessToken: v.optional(v.string()), // Store encrypted token for API calls
-    totalEarnings: v.number(), // Total bounty points earned
-    totalBountiesPosted: v.number(), // Total bounties posted
-    totalPRsSubmitted: v.number(), // Total PRs submitted
-    createdAt: v.number(),
+    totalEarnings: v.optional(v.number()), // Total bounty points earned
+    totalBountiesPosted: v.optional(v.number()), // Total bounties posted
+    totalPRsSubmitted: v.optional(v.number()), // Total PRs submitted
+    createdAt: v.optional(v.number()),
   })
     .index("by_github_id", ["githubId"])
     .index("by_github_username", ["githubUsername"])
-    .index("by_email", ["email"]),
+    .index("email", ["email"]) // Must be named "email" for Convex Auth compatibility
+    .index("phone", ["phone"]), // Must be named "phone" for Convex Auth compatibility
 
   // Coding Agents/Tools table
   codingAgents: defineTable({

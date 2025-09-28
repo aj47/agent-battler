@@ -160,7 +160,7 @@ export const getUserStats = query({
         prsSubmitted: prsSubmitted.length,
         prsApproved: prsSubmitted.filter((pr) => pr.status === "approved").length,
         prsMerged: prsSubmitted.filter((pr) => pr.status === "merged").length,
-        totalEarnings: user.totalEarnings,
+        totalEarnings: user.totalEarnings ?? 0,
         bountiesWon: bountiesWon.length,
         totalBountiesPaid: bountiesPaid.reduce((sum, b) => sum + b.amount, 0),
       },
@@ -185,7 +185,7 @@ export const getLeaderboard = query({
 
     // Sort by total earnings
     const sortedUsers = users
-      .sort((a, b) => b.totalEarnings - a.totalEarnings)
+      .sort((a, b) => (b.totalEarnings ?? 0) - (a.totalEarnings ?? 0))
       .slice(0, limit);
 
     return sortedUsers.map((user) => ({

@@ -58,7 +58,7 @@ export const createIssue = mutation({
     const user = await ctx.db.get(userId);
     if (user) {
       await ctx.db.patch(userId, {
-        totalBountiesPosted: user.totalBountiesPosted + 1,
+        totalBountiesPosted: (user.totalBountiesPosted ?? 0) + 1,
       });
     }
 

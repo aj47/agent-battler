@@ -83,7 +83,7 @@ export const submitPullRequest = mutation({
     const user = await ctx.db.get(userId);
     if (user) {
       await ctx.db.patch(userId, {
-        totalPRsSubmitted: user.totalPRsSubmitted + 1,
+        totalPRsSubmitted: (user.totalPRsSubmitted ?? 0) + 1,
       });
     }
 
@@ -270,7 +270,7 @@ export const reviewPullRequest = mutation({
       const winner = await ctx.db.get(pr.submitterId);
       if (winner) {
         await ctx.db.patch(pr.submitterId, {
-          totalEarnings: winner.totalEarnings + issue.bountyAmount,
+          totalEarnings: (winner.totalEarnings ?? 0) + issue.bountyAmount,
         });
       }
 
