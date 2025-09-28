@@ -152,6 +152,11 @@ export const seedCodingAgents = mutation({
         website: "https://cursor.sh",
       },
       {
+        name: "OpenAI Codex",
+        description: "OpenAI's code generation model",
+        website: "https://openai.com/blog/openai-codex",
+      },
+      {
         name: "GitHub Copilot",
         description: "Your AI pair programmer",
         website: "https://github.com/features/copilot",
