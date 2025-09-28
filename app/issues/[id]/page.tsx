@@ -88,7 +88,7 @@ export default function IssueDetailPage() {
   };
 
   const isCreator = currentUser?._id === issue.creatorId;
-  const canSubmitPR = currentUser && !isCreator && (issue.status === "open" || issue.status === "in_progress");
+  const canSubmitPR = currentUser && (issue.status === "open" || issue.status === "in_progress");
 
   return (
     <div className="min-h-screen bg-gray-50">
