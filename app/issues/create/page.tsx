@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -8,11 +8,13 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
 import { ArrowLeft, Search, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { useAuthActions } from "@convex-dev/auth/react";
 
 export default function CreateIssuePage() {
   const router = useRouter();
   const currentUser = useQuery(api.users.getCurrentUser);
-  
+  const { signIn } = useAuthActions();
+
   const [step, setStep] = useState<"select-repo" | "select-issue" | "set-bounty">("select-repo");
   const [selectedRepo, setSelectedRepo] = useState<any>(null);
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
@@ -24,50 +26,132 @@ export default function CreateIssuePage() {
   // Actions to fetch from GitHub
   const fetchRepos = useAction(api.github.fetchUserRepositories);
   const fetchIssues = useAction(api.github.fetchRepositoryIssues);
-  
+
   // Mutation to create issue
   const createIssue = useMutation(api.issues.createIssue);
 
   const [repos, setRepos] = useState<any[]>([]);
   const [issues, setIssues] = useState<any[]>([]);
+  const [githubUsername, setGithubUsername] = useState("");
+
   const [repoSearch, setRepoSearch] = useState("");
   const [issueSearch, setIssueSearch] = useState("");
+  const [hasAttemptedAutoLoad, setHasAttemptedAutoLoad] = useState(false);
 
   // Load repositories
-  const loadRepositories = async () => {
-    if (!currentUser?.githubAccessToken) {
-      setError("GitHub access token not found. Please sign in again.");
-      return;
-    }
-
+  const loadRepositories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const repoData = await fetchRepos({ accessToken: currentUser.githubAccessToken });
-      setRepos(repoData);
+      if (currentUser?.githubAccessToken) {
+        const repoData = await fetchRepos({ accessToken: currentUser.githubAccessToken });
+        setRepos(repoData);
+      } else if (currentUser?.githubUsername) {
+        // Fallback: fetch public repos without auth so users can still proceed
+        const resp = await fetch(
+          `https://api.github.com/users/${currentUser.githubUsername}/repos?per_page=100&sort=updated`
+        );
+        if (!resp.ok) throw new Error("Failed to load public repositories");
+        const data = await resp.json();
+        const mapped = data.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          fullName: repo.full_name,
+          owner: repo.owner.login,
+          description: repo.description,
+          url: repo.html_url,
+          isPrivate: repo.private,
+          language: repo.language,
+          stargazersCount: repo.stargazers_count,
+          openIssuesCount: repo.open_issues_count,
+        }));
+        setRepos(mapped);
+        setError("Showing public repositories only. Reconnect GitHub to access private repositories.");
+      } else {
+        setError("GitHub access token not found. Please sign in again.");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load repositories");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Load issues for selected repo
-  const loadIssues = async (repo: any) => {
-    if (!currentUser?.githubAccessToken) {
-      setError("GitHub access token not found. Please sign in again.");
+  }, [currentUser?.githubAccessToken, currentUser?.githubUsername, fetchRepos]);
+  // Explicit public-only loader (bypasses Convex auth) as a fallback
+  const loadPublicRepos = useCallback(async (username?: string) => {
+    const uname = username ?? currentUser?.githubUsername ?? githubUsername;
+    if (!uname) {
+      setError("Please enter a GitHub username");
       return;
     }
-
     setIsLoading(true);
     setError(null);
     try {
-      const issueData = await fetchIssues({
-        accessToken: currentUser.githubAccessToken,
-        owner: repo.owner,
-        repo: repo.name,
-        state: "open",
-      });
+      const resp = await fetch(
+        `https://api.github.com/users/${uname}/repos?per_page=100&sort=updated`
+      );
+      if (!resp.ok) throw new Error("Failed to load public repositories");
+      const data = await resp.json();
+      const mapped = data.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        fullName: repo.full_name,
+        owner: repo.owner.login,
+        description: repo.description,
+        url: repo.html_url,
+        isPrivate: repo.private,
+        language: repo.language,
+        stargazersCount: repo.stargazers_count,
+        openIssuesCount: repo.open_issues_count,
+      }));
+      setRepos(mapped);
+      setError("Showing public repositories only. Reconnect GitHub to access private repositories.");
+    } catch (err: any) {
+      setError(err.message || "Failed to load public repositories");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser?.githubUsername, githubUsername]);
+
+  // Keep a local username fallback for public repo loading
+  useEffect(() => {
+    if (currentUser?.githubUsername) {
+      setGithubUsername(currentUser.githubUsername);
+    }
+  }, [currentUser?.githubUsername]);
+
+
+  // Load issues for selected repo
+  const loadIssues = async (repo: any) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      let issueData: any[] = [];
+      if (currentUser?.githubAccessToken) {
+        // Authenticated: use Convex action (includes private repos, better rate limits)
+        issueData = await fetchIssues({
+          accessToken: currentUser.githubAccessToken,
+          owner: repo.owner,
+          repo: repo.name,
+          state: "open",
+        });
+      } else {
+        // Public fallback: GitHub REST (public issues only)
+        const resp = await fetch(
+          `https://api.github.com/repos/${repo.owner}/${repo.name}/issues?per_page=100&state=open`
+        );
+        if (!resp.ok) throw new Error("Failed to load public issues");
+        const data = await resp.json();
+        issueData = data
+          .filter((it: any) => !it.pull_request) // exclude PRs
+          .map((it: any) => ({
+            id: it.id,
+            number: it.number,
+            title: it.title,
+            body: it.body || "",
+            labels: (it.labels || []).map((l: any) => (typeof l === "string" ? l : l.name)).filter(Boolean),
+            url: it.html_url,
+          }));
+      }
       setIssues(issueData);
       setSelectedRepo(repo);
       setStep("select-issue");
@@ -112,10 +196,23 @@ export default function CreateIssuePage() {
     }
   };
 
-  // Load repos on mount
-  if (step === "select-repo" && repos.length === 0 && !isLoading && currentUser) {
-    loadRepositories();
-  }
+  useEffect(() => {
+    if (
+      step === "select-repo" &&
+      repos.length === 0 &&
+      !isLoading &&
+      !hasAttemptedAutoLoad
+    ) {
+      setHasAttemptedAutoLoad(true);
+      void loadRepositories();
+    }
+  }, [
+    step,
+    repos.length,
+    isLoading,
+    hasAttemptedAutoLoad,
+    loadRepositories,
+  ]);
 
   const filteredRepos = repos.filter((repo) =>
     repo.name.toLowerCase().includes(repoSearch.toLowerCase()) ||
@@ -146,7 +243,7 @@ export default function CreateIssuePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -186,18 +283,35 @@ export default function CreateIssuePage() {
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800">{error}</p>
-          </div>
-        )}
+        {/* Error and fallback username */}
+        <div className="mb-6">
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800">{error}</p>
+            </div>
+          )}
+
+          {!currentUser?.githubAccessToken && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                GitHub username (public repos fallback)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. octocat"
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Step 1: Select Repository */}
         {step === "select-repo" && (
           <div className="bg-white rounded-lg border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Select a Repository</h2>
-            
+
             <div className="mb-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -209,6 +323,34 @@ export default function CreateIssuePage() {
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+            </div>
+
+            {/* Manual load / retry controls */}
+            <div className="flex items-center justify-between mb-4 gap-3">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => void loadRepositories()}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Loading..." : "Load repositories"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => void loadPublicRepos()}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Loading..." : "Load public repos only"}
+                </Button>
+              </div>
+              {!currentUser?.githubAccessToken && (
+                <Button
+                  variant="primary"
+                  onClick={() => void signIn("github")}
+                >
+                  Reconnect GitHub
+                </Button>
+              )}
             </div>
 
             {isLoading ? (

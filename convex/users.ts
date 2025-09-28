@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
+import { Octokit } from "octokit";
+import type { Doc } from "./_generated/dataModel";
+
 
 /**
  * Get or create user profile
@@ -85,7 +88,7 @@ export const getUserByGitHubUsername = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("users")
-      .withIndex("by_github_username", (q) => 
+      .withIndex("by_github_username", (q) =>
         q.eq("githubUsername", args.username)
       )
       .first();
@@ -177,7 +180,7 @@ export const getLeaderboard = query({
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
-    
+
     const users = await ctx.db
       .query("users")
       .order("desc")
@@ -212,9 +215,61 @@ export const updateGitHubAccessToken = mutation({
       throw new Error("Not authenticated");
     }
 
-    await ctx.db.patch(userId, {
+    const existingUser = await ctx.db.get(userId);
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+
+    const octokit = new Octokit({ auth: args.accessToken });
+    const { data: profile } = await octokit.rest.users.getAuthenticated();
+
+    const updates: Partial<Omit<Doc<"users">, "_id" | "_creationTime">> = {
       githubAccessToken: args.accessToken,
-    });
+    };
+
+    if (profile.id !== undefined && profile.id !== null) {
+      updates.githubId = String(profile.id);
+    } else if (existingUser.githubId) {
+      updates.githubId = existingUser.githubId;
+    }
+
+    if (profile.login) {
+      updates.githubUsername = profile.login;
+    } else if (existingUser.githubUsername) {
+      updates.githubUsername = existingUser.githubUsername;
+    }
+
+    if (profile.name) {
+      updates.name = profile.name;
+    } else if (!existingUser.name && profile.login) {
+      updates.name = profile.login;
+    }
+
+    if (profile.avatar_url) {
+      updates.image = profile.avatar_url;
+    }
+
+    if (profile.email) {
+      updates.email = profile.email;
+    }
+
+    if (typeof existingUser.totalEarnings !== "number") {
+      updates.totalEarnings = 0;
+    }
+
+    if (typeof existingUser.totalBountiesPosted !== "number") {
+      updates.totalBountiesPosted = 0;
+    }
+
+    if (typeof existingUser.totalPRsSubmitted !== "number") {
+      updates.totalPRsSubmitted = 0;
+    }
+
+    if (!existingUser.createdAt) {
+      updates.createdAt = Date.now();
+    }
+
+    await ctx.db.patch(userId, updates);
 
     return userId;
   },

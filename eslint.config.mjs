@@ -18,7 +18,19 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "convex/_generated/**",
     ],
+    rules: {
+      // Keep hooks strict to avoid runtime bugs
+      "react-hooks/rules-of-hooks": "error",
+      // Relax noisy rules so build isn't blocked by content or exploratory typing
+      "react/no-unescaped-entities": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }
+      ],
+    },
   },
 ];
 

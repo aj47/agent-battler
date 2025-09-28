@@ -20,6 +20,8 @@ const schema = defineSchema({
     // Custom fields for Agent Battler
     githubId: v.optional(v.string()),
     githubUsername: v.optional(v.string()),
+    login: v.optional(v.string()), // GitHub login (same as githubUsername)
+    avatar_url: v.optional(v.string()), // GitHub avatar URL (same as image)
     githubAccessToken: v.optional(v.string()), // Store encrypted token for API calls
     totalEarnings: v.optional(v.number()), // Total bounty points earned
     totalBountiesPosted: v.optional(v.number()), // Total bounties posted

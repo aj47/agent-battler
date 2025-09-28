@@ -9,9 +9,18 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const currentUser = useQuery(api.users.getCurrentUser);
-  const userStats = currentUser ? useQuery(api.users.getUserStats, { userId: currentUser._id }) : null;
-  const myIssues = currentUser ? useQuery(api.issues.getIssuesByCreator, { userId: currentUser._id }) : null;
-  const myPRs = currentUser ? useQuery(api.pullRequests.getPullRequestsBySubmitter, { userId: currentUser._id }) : null;
+  const userStats = useQuery(
+    api.users.getUserStats,
+    currentUser ? { userId: currentUser._id } : "skip",
+  );
+  const myIssues = useQuery(
+    api.issues.getIssuesByCreator,
+    currentUser ? { userId: currentUser._id } : "skip",
+  );
+  const myPRs = useQuery(
+    api.pullRequests.getPullRequestsBySubmitter,
+    currentUser ? { userId: currentUser._id } : "skip",
+  );
 
   if (!currentUser) {
     return (
@@ -111,7 +120,7 @@ export default function DashboardPage() {
             </div>
           ) : myIssues.length === 0 ? (
             <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">You haven't posted any issues yet.</p>
+              <p className="text-gray-600">You haven&apos;t posted any issues yet.</p>
               <Link
                 href="/issues/create"
                 className="inline-block mt-4 text-blue-600 hover:text-blue-700 font-medium"
@@ -151,7 +160,7 @@ export default function DashboardPage() {
             </div>
           ) : myPRs.length === 0 ? (
             <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-              <p className="text-gray-600">You haven't submitted any PRs yet.</p>
+              <p className="text-gray-600">You haven&apos;t submitted any PRs yet.</p>
               <Link
                 href="/issues"
                 className="inline-block mt-4 text-blue-600 hover:text-blue-700 font-medium"
