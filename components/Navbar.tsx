@@ -1,0 +1,188 @@
+"use client";
+
+import Link from "next/link";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Bell, Code2, Trophy, User, LogOut, Menu, X } from "lucide-react";
+import { useState } from "react";
+
+export function Navbar() {
+  const { signOut } = useAuthActions();
+  const currentUser = useQuery(api.users.getCurrentUser);
+  const unreadCount = useQuery(api.notifications.getUnreadCount);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Logo and main nav */}
+          <div className="flex">
+            <Link href="/" className="flex items-center">
+              <Code2 className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-bold text-gray-900">
+                Agent Battler
+              </span>
+            </Link>
+
+            {/* Desktop navigation */}
+            <div className="hidden md:ml-10 md:flex md:space-x-8">
+              <Link
+                href="/issues"
+                className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-blue-600"
+              >
+                Browse Issues
+              </Link>
+              {currentUser && (
+                <>
+                  <Link
+                    href="/issues/create"
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-blue-600"
+                  >
+                    Post Issue
+                  </Link>
+                  <Link
+                    href="/leaderboard"
+                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900 hover:text-blue-600"
+                  >
+                    <Trophy className="h-4 w-4 mr-1" />
+                    Leaderboard
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right side - user menu */}
+          <div className="flex items-center">
+            {currentUser ? (
+              <>
+                {/* Desktop user menu */}
+                <div className="hidden md:flex md:items-center md:space-x-4">
+                  <Link
+                    href="/notifications"
+                    className="relative p-2 text-gray-600 hover:text-gray-900"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount && unreadCount > 0 && (
+                      <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      {currentUser.totalEarnings} pts
+                    </span>
+                  </div>
+
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    {currentUser.image ? (
+                      <img
+                        src={currentUser.image}
+                        alt={currentUser.name || "User"}
+                        className="h-8 w-8 rounded-full"
+                      />
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-gray-700">
+                      {currentUser.name || currentUser.githubUsername}
+                    </span>
+                  </Link>
+
+                  <button
+                    onClick={() => void signOut()}
+                    className="p-2 text-gray-600 hover:text-gray-900"
+                    title="Sign out"
+                  >
+                    <LogOut className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Mobile menu button */}
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                >
+                  {mobileMenuOpen ? (
+                    <X className="h-6 w-6" />
+                  ) : (
+                    <Menu className="h-6 w-6" />
+                  )}
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Sign in with GitHub
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && currentUser && (
+        <div className="md:hidden border-t border-gray-200">
+          <div className="pt-2 pb-3 space-y-1">
+            <Link
+              href="/issues"
+              className="block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Browse Issues
+            </Link>
+            <Link
+              href="/issues/create"
+              className="block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Post Issue
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Leaderboard
+            </Link>
+            <Link
+              href="/dashboard"
+              className="block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/notifications"
+              className="block px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Notifications {unreadCount && unreadCount > 0 && `(${unreadCount})`}
+            </Link>
+            <button
+              onClick={() => {
+                void signOut();
+                setMobileMenuOpen(false);
+              }}
+              className="block w-full text-left px-4 py-2 text-base font-medium text-gray-700 hover:bg-gray-100"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+}
+
