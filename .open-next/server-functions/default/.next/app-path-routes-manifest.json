@@ -1,0 +1,12 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/auth/signin/page": "/auth/signin",
+  "/issues/[id]/submit-pr/page": "/issues/[id]/submit-pr",
+  "/dashboard/page": "/dashboard",
+  "/issues/create/page": "/issues/create",
+  "/issues/page": "/issues",
+  "/leaderboard/page": "/leaderboard",
+  "/issues/[id]/page": "/issues/[id]",
+  "/page": "/"
+}

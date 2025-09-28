@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
+    "build:cloudflare": "next build && open-next build --minify",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:cloudflare": "npm run build:cloudflare && wrangler pages deploy .open-next/worker --project-name agent-battler"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",
@@ -28,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.40.2"
   }
 }
