@@ -6,11 +6,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
-import { 
-  ArrowLeft, 
-  ExternalLink, 
-  DollarSign, 
-  Clock, 
+import { CommentSection } from "@/components/CommentSection";
+import {
+  ArrowLeft,
+  ExternalLink,
+  DollarSign,
+  Clock,
   GitPullRequest,
   Eye,
   Tag,
@@ -199,11 +200,11 @@ export default function IssueDetailPage() {
             )}
 
             {/* Pull Requests */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Pull Requests ({issue.pullRequests?.length || 0})
               </h2>
-              
+
               {!issue.pullRequests || issue.pullRequests.length === 0 ? (
                 <p className="text-gray-600 text-center py-8">
                   No pull requests submitted yet. Be the first!
@@ -245,6 +246,13 @@ export default function IssueDetailPage() {
                 </div>
               )}
             </div>
+
+            {/* Comments Section */}
+            <CommentSection
+              issueId={issueId}
+              currentUserId={currentUser?._id}
+              issueCreatorId={issue.creatorId}
+            />
           </div>
 
           {/* Sidebar */}

@@ -151,16 +151,24 @@ const schema = defineSchema({
     .index("by_to_user", ["toUserId"])
     .index("by_status", ["status"]),
 
-  // Comments table - for discussions on issues
+  // Comments table - for forum-style discussions on issues with nested replies
   comments: defineTable({
     issueId: v.id("issues"),
     userId: v.id("users"),
     content: v.string(),
+    // For threaded/nested comments - if null, it's a top-level comment
+    parentCommentId: v.optional(v.id("comments")),
+    // Track if comment has been edited
+    isEdited: v.boolean(),
+    // Track number of replies for efficient display
+    replyCount: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_issue", ["issueId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_parent", ["parentCommentId"])
+    .index("by_issue_and_parent", ["issueId", "parentCommentId"]),
 
   // Notifications table
   notifications: defineTable({
