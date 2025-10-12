@@ -7,6 +7,30 @@ import { v } from "convex/values";
  * to enable local/manual E2E verification without GitHub OAuth.
  */
 
+export const insertUser = mutation({
+  args: {
+    githubId: v.string(),
+    githubUsername: v.string(),
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    image: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await ctx.db.insert("users", {
+      githubId: args.githubId,
+      githubUsername: args.githubUsername,
+      name: args.name,
+      email: args.email,
+      image: args.image,
+      totalEarnings: 0,
+      totalBountiesPosted: 0,
+      totalPRsSubmitted: 0,
+      createdAt: Date.now(),
+    });
+    return userId;
+  },
+});
+
 export const insertIssue = mutation({
   args: {
     creatorId: v.id("users"),

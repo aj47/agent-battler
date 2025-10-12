@@ -7,6 +7,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
 import { CommentSection } from "@/components/CommentSection";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import {
   ArrowLeft,
   ExternalLink,
@@ -161,9 +162,11 @@ export default function IssueDetailPage() {
               )}
 
               {/* Description */}
-              <div className="prose max-w-none">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{issue.description}</p>
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
+                <div className="text-gray-700">
+                  <MarkdownRenderer content={issue.description} />
+                </div>
               </div>
 
               {/* Stats */}
@@ -225,8 +228,10 @@ export default function IssueDetailPage() {
                               {pr.status}
                             </span>
                           </div>
-                          <h3 className="font-semibold text-gray-900 mb-1">{pr.title}</h3>
-                          <p className="text-sm text-gray-600 mb-2">{pr.description}</p>
+                          <h3 className="font-semibold text-gray-900 mb-2">{pr.title}</h3>
+                          <div className="text-sm text-gray-600 mb-3">
+                            <MarkdownRenderer content={pr.description} />
+                          </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
                             <span>#{pr.githubPrNumber}</span>
                             <a
