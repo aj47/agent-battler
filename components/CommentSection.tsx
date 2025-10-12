@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { MessageSquare, Reply, Edit2, Trash2, Send } from "lucide-react";
 import { Button } from "./Button";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface CommentSectionProps {
   issueId: Id<"issues">;
@@ -297,7 +298,9 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
             </div>
           </div>
         ) : (
-          <p className="text-gray-700 mb-3 whitespace-pre-wrap">{comment.content}</p>
+          <div className="text-gray-700 mb-3">
+            <MarkdownRenderer content={comment.content} />
+          </div>
         )}
 
         {/* Comment Actions */}
