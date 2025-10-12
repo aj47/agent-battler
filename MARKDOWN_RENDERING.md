@@ -9,7 +9,7 @@ Agent Battler now supports **GitHub-flavored markdown** rendering for issue desc
 ### Supported Markdown Elements
 
 - **Headers**: `# H1`, `## H2`, `### H3`, etc.
-- **Text Formatting**: 
+- **Text Formatting**:
   - **Bold**: `**text**`
   - *Italic*: `*text*`
   - ~~Strikethrough~~: `~~text~~`
@@ -21,11 +21,14 @@ Agent Battler now supports **GitHub-flavored markdown** rendering for issue desc
   - Ordered: `1. item`
   - Nested lists supported
 - **Links**: `[text](url)`
-- **Images**: `![alt](url)`
+- **Images**:
+  - Markdown images: `![alt](url)`
+  - HTML images: `<img width="574" height="410" alt="Image" src="url" />`
 - **Tables**: GitHub-flavored markdown tables
 - **Blockquotes**: `> quote`
 - **Horizontal Rules**: `---`
 - **Line Breaks**: Automatic line break handling
+- **HTML Content**: Raw HTML tags are rendered (sanitized for security)
 
 ## Implementation
 
@@ -36,10 +39,11 @@ The feature uses the following npm packages:
 - **react-markdown** (^3.0.0): Core markdown rendering library
 - **remark-gfm**: GitHub-flavored markdown support
 - **remark-breaks**: Automatic line break handling
+- **rehype-raw**: HTML content rendering support
 
 Install with:
 ```bash
-npm install react-markdown remark-gfm remark-breaks
+npm install react-markdown remark-gfm remark-breaks rehype-raw
 ```
 
 ### Components
@@ -112,25 +116,53 @@ Comments and replies support markdown formatting:
 </div>
 ```
 
+## HTML Image Support
+
+The MarkdownRenderer now supports HTML image tags commonly found in GitHub issues:
+
+```html
+<img width="574" height="410" alt="Image" src="https://github.com/user-attachments/assets/..." />
+```
+
+### Features
+
+- **Width and Height Attributes**: Preserved in rendered output
+- **Alt Text**: Properly displayed for accessibility
+- **GitHub Attachments**: Works with GitHub's user-attachments URLs
+- **External Images**: Supports any image URL
+- **Responsive**: Images scale to fit container width
+
+### Example
+
+```markdown
+# Issue with Images
+
+Here's a GitHub-style image:
+
+<img width="574" height="410" alt="Screenshot" src="https://github.com/user-attachments/assets/..." />
+
+And a markdown image:
+
+![Alt text](https://example.com/image.png)
+```
+
+Both formats render with proper styling and responsiveness.
+
 ## Testing
 
-### Test Issue
+### Test Issues
 
-A test issue with comprehensive markdown examples has been created:
+Two test issues with comprehensive examples have been created:
 
-**ID**: `kd7emp92cpemrexn5jnvv0wae57sb0qb`
+**Issue 1 - Markdown Support**
+- **ID**: `kd7emp92cpemrexn5jnvv0wae57sb0qb`
+- **Content**: Headers, text formatting, code blocks, lists, blockquotes, links, markdown images, tables
 
-**Content includes**:
-- Headers (H1-H6)
-- Text formatting (bold, italic, strikethrough)
-- Code blocks with syntax highlighting
-- Lists (ordered and unordered)
-- Blockquotes
-- Links
-- Images
-- Tables
+**Issue 2 - HTML Image Support**
+- **ID**: `kd78kcj0gsyh85mh0zrka5sa8n7sbe9q`
+- **Content**: HTML img tags, GitHub-style images, mixed markdown and HTML content
 
-**To view**: Navigate to `/issues/kd7emp92cpemrexn5jnvv0wae57sb0qb`
+**To view**: Navigate to `/issues/{id}` with the issue ID above
 
 ### Creating Test Issues
 
