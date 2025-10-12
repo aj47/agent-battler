@@ -8,7 +8,6 @@ import { Code } from "lucide-react";
 
 interface MarkdownRendererProps {
   content: string;
-  className?: string;
 }
 
 /**
@@ -25,12 +24,12 @@ interface MarkdownRendererProps {
  * - Tables
  * - Blockquotes
  */
-export function MarkdownRenderer({ content, className = "" }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkBreaks]}
-      className={`prose prose-sm max-w-none ${className}`}
-      components={{
+    <div className="prose prose-sm max-w-none">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{
         // Headers
         h1: ({ node, ...props }) => (
           <h1 className="text-3xl font-bold text-gray-900 mt-6 mb-4" {...props} />
@@ -164,9 +163,10 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
           <del className="line-through text-gray-500" {...props} />
         ),
       }}
-    >
-      {content}
-    </ReactMarkdown>
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 
