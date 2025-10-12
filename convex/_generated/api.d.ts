@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as auth from "../auth.js";
 import type * as codingAgents from "../codingAgents.js";
+import type * as comments from "../comments.js";
 import type * as dev from "../dev.js";
 import type * as github from "../github.js";
 import type * as http from "../http.js";
@@ -34,6 +35,7 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   codingAgents: typeof codingAgents;
+  comments: typeof comments;
   dev: typeof dev;
   github: typeof github;
   http: typeof http;
