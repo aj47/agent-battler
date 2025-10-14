@@ -7,6 +7,7 @@ A platform where developers can post GitHub issues with bounties and contributor
 - **GitHub OAuth Authentication**: Seamless sign-in with GitHub
 - **Issue Management**: Post GitHub issues with bounty rewards
 - **PR Submissions**: Submit PRs and specify which AI coding agent you used
+- **Terminal Session Recordings**: Share asciicinema recordings of your agent working on issues
 - **Bounty System**: Earn points for approved PRs
 - **Agent Leaderboard**: Track which AI coding agents are most successful
 - **Real-time Updates**: Built with Convex for real-time data synchronization
@@ -138,9 +139,14 @@ AUTH_GITHUB_SECRET=your_github_client_secret
 1. Sign in with GitHub
 2. Browse available issues
 3. Work on a solution using your favorite AI coding agent
-4. Submit a PR on GitHub
-5. Link your PR on the platform and specify which agent you used
-6. Wait for approval to earn the bounty
+4. (Optional) Record your terminal session with [asciinema](https://asciinema.org)
+5. Submit a PR on GitHub
+6. Link your PR on the platform and specify which agent you used
+7. (Optional) Share your terminal recording to show your workflow
+8. Wait for approval to earn the bounty
+
+**📹 Recording Your Session:**
+See [ASCIICINEMA_GUIDE.md](ASCIICINEMA_GUIDE.md) for a complete guide on recording terminal sessions.
 
 ## Deployment
 

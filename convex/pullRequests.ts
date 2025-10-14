@@ -16,6 +16,15 @@ export const submitPullRequest = mutation({
     description: v.string(),
     githubUrl: v.string(),
     codingAgentId: v.optional(v.id("codingAgents")),
+    // asciicinema recording fields
+    asciinemaUrl: v.optional(v.string()),
+    asciinemaFileId: v.optional(v.id("_storage")),
+    asciinemaMetadata: v.optional(v.object({
+      duration: v.optional(v.number()),
+      terminalSize: v.optional(v.string()),
+      timestamp: v.optional(v.number()),
+      title: v.optional(v.string()),
+    })),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
@@ -67,6 +76,9 @@ export const submitPullRequest = mutation({
       issueId: args.issueId,
       submitterId: userId,
       codingAgentId: args.codingAgentId,
+      asciinemaUrl: args.asciinemaUrl,
+      asciinemaFileId: args.asciinemaFileId,
+      asciinemaMetadata: args.asciinemaMetadata,
       status: "pending",
       createdAt: Date.now(),
       updatedAt: Date.now(),

@@ -100,12 +100,22 @@ const schema = defineSchema({
     title: v.string(),
     description: v.string(),
     githubUrl: v.string(),
-    
+
     // Platform-specific fields
     issueId: v.id("issues"), // Linked issue
     submitterId: v.id("users"), // User who submitted the PR
     codingAgentId: v.optional(v.id("codingAgents")), // Tool used
-    
+
+    // asciicinema recording fields
+    asciinemaUrl: v.optional(v.string()), // URL to asciicinema.org or self-hosted recording
+    asciinemaFileId: v.optional(v.id("_storage")), // Convex storage ID for uploaded .cast file
+    asciinemaMetadata: v.optional(v.object({
+      duration: v.optional(v.number()), // Recording duration in seconds
+      terminalSize: v.optional(v.string()), // e.g., "80x24"
+      timestamp: v.optional(v.number()), // Recording timestamp
+      title: v.optional(v.string()), // Recording title
+    })),
+
     // PR status
     status: v.union(
       v.literal("pending"), // Submitted but not reviewed
@@ -114,11 +124,11 @@ const schema = defineSchema({
       v.literal("merged"), // Merged on GitHub
       v.literal("closed") // Closed without merge
     ),
-    
+
     // Feedback
     feedback: v.optional(v.string()), // Feedback from issue creator
     rating: v.optional(v.number()), // Rating 1-5
-    
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),

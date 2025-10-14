@@ -8,6 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
 import { CommentSection } from "@/components/CommentSection";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { AsciinemaPlayer } from "@/components/AsciinemaPlayer";
 import {
   ArrowLeft,
   ExternalLink,
@@ -16,7 +17,8 @@ import {
   GitPullRequest,
   Eye,
   Tag,
-  User
+  User,
+  Video
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -227,12 +229,18 @@ export default function IssueDetailPage() {
                             }`}>
                               {pr.status}
                             </span>
+                            {pr.asciinemaUrl && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 inline-flex items-center">
+                                <Video className="h-3 w-3 mr-1" />
+                                Recording
+                              </span>
+                            )}
                           </div>
                           <h3 className="font-semibold text-gray-900 mb-2">{pr.title}</h3>
                           <div className="text-sm text-gray-600 mb-3">
                             <MarkdownRenderer content={pr.description} />
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 mb-4">
                             <span>#{pr.githubPrNumber}</span>
                             <a
                               href={pr.githubUrl}
@@ -244,6 +252,21 @@ export default function IssueDetailPage() {
                               <ExternalLink className="h-3 w-3 ml-1" />
                             </a>
                           </div>
+
+                          {/* asciicinema Recording */}
+                          {pr.asciinemaUrl && (
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                              <AsciinemaPlayer
+                                src={pr.asciinemaUrl}
+                                title="Terminal Session Recording"
+                                autoPlay={false}
+                                loop={false}
+                                speed={1}
+                                idleTimeLimit={2}
+                                terminalFontSize="small"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
