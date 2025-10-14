@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/Button";
+import { RecordingUpload } from "@/components/RecordingUpload";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
@@ -26,6 +27,11 @@ export default function SubmitPRPage() {
   const [selectedAgentId, setSelectedAgentId] = useState<Id<"codingAgents"> | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRecordingUpload, setShowRecordingUpload] = useState(false);
+  const [recordingMetadata, setRecordingMetadata] = useState<{
+    duration: number;
+    fileSize: number;
+  } | null>(null);
 
   if (!issue || !currentUser) {
     return (
@@ -168,6 +174,48 @@ export default function SubmitPRPage() {
             </select>
             <p className="mt-2 text-sm text-gray-500">
               Help us track which AI coding agents are most successful!
+            </p>
+          </div>
+
+          {/* Session Recording Upload (Optional) */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Session Recording (Optional)
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowRecordingUpload(!showRecordingUpload)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {showRecordingUpload ? "Hide" : "Add Recording"}
+              </button>
+            </div>
+
+            {showRecordingUpload && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <RecordingUpload
+                  prId={issueId as any} // Temporary - will be replaced with actual PR ID after creation
+                  onUploadComplete={(metadata) => {
+                    setRecordingMetadata(metadata);
+                  }}
+                  onError={(error) => {
+                    setError(error);
+                  }}
+                />
+              </div>
+            )}
+
+            {recordingMetadata && (
+              <div className="mt-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-sm text-green-800">
+                  ✓ Recording uploaded ({recordingMetadata.duration}s, {Math.round(recordingMetadata.fileSize / 1024)}KB)
+                </p>
+              </div>
+            )}
+
+            <p className="mt-2 text-sm text-gray-500">
+              Optional: Upload a terminal recording of your agent working on this issue to showcase the solution process.
             </p>
           </div>
 

@@ -100,12 +100,12 @@ const schema = defineSchema({
     title: v.string(),
     description: v.string(),
     githubUrl: v.string(),
-    
+
     // Platform-specific fields
     issueId: v.id("issues"), // Linked issue
     submitterId: v.id("users"), // User who submitted the PR
     codingAgentId: v.optional(v.id("codingAgents")), // Tool used
-    
+
     // PR status
     status: v.union(
       v.literal("pending"), // Submitted but not reviewed
@@ -114,11 +114,21 @@ const schema = defineSchema({
       v.literal("merged"), // Merged on GitHub
       v.literal("closed") // Closed without merge
     ),
-    
+
     // Feedback
     feedback: v.optional(v.string()), // Feedback from issue creator
     rating: v.optional(v.number()), // Rating 1-5
-    
+
+    // Session Recording (asciicinema)
+    recordingUrl: v.optional(v.string()), // URL to .cast file or asciinema.org link
+    recordingStorageId: v.optional(v.string()), // Convex file storage ID
+    recordingMetadata: v.optional(v.object({
+      duration: v.number(), // Duration in seconds
+      fileSize: v.number(), // File size in bytes
+      uploadedAt: v.number(), // Timestamp when uploaded
+      format: v.literal("asciicast_v3"), // Recording format
+    })),
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
