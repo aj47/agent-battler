@@ -375,7 +375,7 @@ export default function CreateIssuePage() {
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                           {repo.language && <span>{repo.language}</span>}
                           <span>⭐ {repo.stargazersCount}</span>
-                          <span>Issues: {repo.openIssuesCount}</span>
+                          <span>Open Items: {repo.openIssuesCount}</span>
                         </div>
                       </div>
                     </div>
@@ -420,7 +420,8 @@ export default function CreateIssuePage() {
 
             {filteredIssues.length === 0 ? (
               <div className="text-center py-8 text-gray-600">
-                No open issues found in this repository.
+                <p className="font-medium">No open issues found in this repository.</p>
+                <p className="text-sm mt-2">Note: Pull requests are not shown here. The repository may have open pull requests but no issues.</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">
