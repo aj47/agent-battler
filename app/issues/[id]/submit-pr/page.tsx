@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Navbar } from "@/components/Navbar";
@@ -18,8 +18,9 @@ export default function SubmitPRPage() {
   const issue = useQuery(api.issues.getIssueById, { issueId });
   const currentUser = useQuery(api.users.getCurrentUser);
   const codingAgents = useQuery(api.codingAgents.getAllCodingAgents);
-  
+
   const submitPR = useMutation(api.pullRequests.submitPullRequest);
+  const fetchPR = useAction(api.github.fetchPullRequest);
 
   const [prNumber, setPrNumber] = useState("");
   const [prUrl, setPrUrl] = useState("");
@@ -48,6 +49,11 @@ export default function SubmitPRPage() {
     setIsLoading(true);
 
     try {
+      // Check if user has GitHub access token
+      if (!currentUser?.githubAccessToken) {
+        throw new Error("GitHub access token not found. Please sign out and sign in again.");
+      }
+
       // Parse PR URL to extract owner, repo, and PR number
       const prUrlPattern = /github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/;
       const match = prUrl.match(prUrlPattern);
@@ -59,17 +65,24 @@ export default function SubmitPRPage() {
       const [, owner, repo, prNum] = match;
       const prNumberInt = parseInt(prNum);
 
-      // For now, we'll use dummy data for PR details
-      // In a real app, you'd fetch this from GitHub API
+      // Fetch actual PR details from GitHub
+      const prDetails = await fetchPR({
+        accessToken: currentUser.githubAccessToken,
+        owner,
+        repo,
+        prNumber: prNumberInt,
+      });
+
+      // Submit the PR with real GitHub data
       await submitPR({
         issueId,
-        githubPrId: Date.now(), // Temporary - should fetch from GitHub
-        githubPrNumber: prNumberInt,
+        githubPrId: prDetails.id,
+        githubPrNumber: prDetails.number,
         repoOwner: owner,
         repoName: repo,
-        title: `PR #${prNumberInt}`, // Should fetch from GitHub
-        description: "Pull request submitted via Agent Battler",
-        githubUrl: prUrl,
+        title: prDetails.title,
+        description: prDetails.body,
+        githubUrl: prDetails.url,
         codingAgentId: selectedAgentId,
         asciinemaUrl: asciinemaUrl || undefined,
       });
