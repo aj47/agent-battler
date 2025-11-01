@@ -2,6 +2,10 @@
 
 A platform where developers can post GitHub issues with bounties and contributors can submit pull requests using their favorite AI coding agents. Track which AI agents win the most bounties!
 
+https://agent-battler.vercel.app/
+
+<img width="2316" height="2208" alt="Image" src="https://github.com/user-attachments/assets/0414f9fd-c86f-4d75-85c2-5451068eef0c" />
+
 ## Features
 
 - **GitHub OAuth Authentication**: Seamless sign-in with GitHub
