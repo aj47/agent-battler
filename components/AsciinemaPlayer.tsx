@@ -17,9 +17,9 @@ interface AsciinemaPlayerProps {
 
 /**
  * AsciinemaPlayer component
- * 
- * Displays an asciicinema terminal recording using the official asciinema-player.
- * This component loads the player dynamically from CDN to avoid build issues.
+ *
+ * Displays an asciicinema terminal recording using the official asciinema embed method.
+ * This component uses the iframe embed approach to avoid CORS issues.
  */
 export function AsciinemaPlayer({
   src,
@@ -33,65 +33,46 @@ export function AsciinemaPlayer({
   theme = "asciinema",
 }: AsciinemaPlayerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const playerRef = useRef<any>(null);
 
   useEffect(() => {
-    // Load asciinema-player CSS and JS from CDN
-    const loadAsciinemaPlayer = async () => {
-      // Check if already loaded
-      if (window.AsciinemaPlayer) {
-        initializePlayer();
-        return;
-      }
+    if (!containerRef.current) return;
 
-      // Load CSS
-      const cssLink = document.createElement("link");
-      cssLink.rel = "stylesheet";
-      cssLink.type = "text/css";
-      cssLink.href = "https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.css";
-      document.head.appendChild(cssLink);
+    // Extract the asciinema ID from the URL
+    let asciinemaId = "";
 
-      // Load JS
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/asciinema-player@3.10.0/dist/bundle/asciinema-player.min.js";
-      script.async = true;
-      script.onload = () => {
-        initializePlayer();
-      };
-      document.head.appendChild(script);
-    };
+    // Handle different URL formats:
+    // https://asciinema.org/a/ID
+    // https://asciinema.org/a/ID.cast
+    const match = src.match(/asciinema\.org\/a\/([^/.]+)/);
+    if (match) {
+      asciinemaId = match[1];
+    } else {
+      console.error("Invalid asciinema URL format:", src);
+      return;
+    }
 
-    const initializePlayer = () => {
-      if (!containerRef.current || !window.AsciinemaPlayer) return;
+    // Create the script element for iframe embedding
+    const script = document.createElement("script");
+    script.src = `https://asciinema.org/a/${asciinemaId}.js`;
+    script.id = `asciicast-${asciinemaId}`;
+    script.async = true;
 
-      // Clear any existing player
-      if (playerRef.current) {
-        containerRef.current.innerHTML = "";
-      }
+    // Add optional parameters as data attributes
+    if (autoPlay) script.setAttribute("data-autoplay", "true");
+    if (loop) script.setAttribute("data-loop", "true");
+    if (speed !== 1) script.setAttribute("data-speed", speed.toString());
+    if (idleTimeLimit) script.setAttribute("data-idle-time-limit", idleTimeLimit.toString());
+    if (poster) script.setAttribute("data-poster", poster);
+    if (terminalFontSize) script.setAttribute("data-size", terminalFontSize);
+    if (theme) script.setAttribute("data-theme", theme);
 
-      // Create player
-      try {
-        playerRef.current = window.AsciinemaPlayer.create(src, containerRef.current, {
-          autoPlay,
-          loop,
-          speed,
-          idleTimeLimit,
-          poster,
-          terminalFontSize,
-          theme,
-          fit: "width",
-          controls: true,
-        });
-      } catch (error) {
-        console.error("Failed to initialize asciinema player:", error);
-      }
-    };
-
-    loadAsciinemaPlayer();
+    // Clear container and append script
+    containerRef.current.innerHTML = "";
+    containerRef.current.appendChild(script);
 
     // Cleanup
     return () => {
-      if (playerRef.current && containerRef.current) {
+      if (containerRef.current) {
         containerRef.current.innerHTML = "";
       }
     };
@@ -105,9 +86,9 @@ export function AsciinemaPlayer({
           <h4 className="text-sm font-medium text-gray-900">{title}</h4>
         </div>
       )}
-      <div 
-        ref={containerRef} 
-        className="rounded-lg overflow-hidden border border-gray-300 bg-black"
+      <div
+        ref={containerRef}
+        className="rounded-lg overflow-hidden border border-gray-300"
         style={{ minHeight: "400px" }}
       />
       <div className="mt-2 text-xs text-gray-500">
@@ -117,12 +98,5 @@ export function AsciinemaPlayer({
       </div>
     </div>
   );
-}
-
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    AsciinemaPlayer: any;
-  }
 }
 

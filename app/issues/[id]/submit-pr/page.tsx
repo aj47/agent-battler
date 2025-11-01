@@ -195,7 +195,7 @@ export default function SubmitPRPage() {
               >
                 asciinema
               </a>
-              . This helps others learn and builds trust!
+              . Paste the URL from asciinema.org (e.g., https://asciinema.org/a/abc123). This helps others learn and builds trust!
             </p>
           </div>
 
