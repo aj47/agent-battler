@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -149,5 +149,46 @@ export const approvePullRequestDev = mutation({
     }
 
     return args.prId;
+  },
+});
+
+export const insertTestUser = internalMutation({
+  args: {
+    githubId: v.string(),
+    githubUsername: v.string(),
+    name: v.string(),
+    image: v.optional(v.string()),
+    totalEarnings: v.number(),
+    totalPRsSubmitted: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await ctx.db.insert("users", {
+      githubId: args.githubId,
+      githubUsername: args.githubUsername,
+      name: args.name,
+      image: args.image,
+      totalEarnings: args.totalEarnings,
+      totalBountiesPosted: 0,
+      totalPRsSubmitted: args.totalPRsSubmitted,
+      createdAt: Date.now(),
+    });
+
+    return userId;
+  },
+});
+
+export const updateUserEarnings = internalMutation({
+  args: {
+    userId: v.id("users"),
+    totalEarnings: v.number(),
+    totalPRsSubmitted: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      totalEarnings: args.totalEarnings,
+      totalPRsSubmitted: args.totalPRsSubmitted,
+    });
+
+    return args.userId;
   },
 });
