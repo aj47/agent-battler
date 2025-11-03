@@ -106,14 +106,14 @@ export default function Home() {
                           {user.name || user.githubUsername}
                         </p>
                         <p className="text-xs text-gray-500 truncate">
-                          @{user.githubUsername}
+                          @{user.githubUsername ?? 'unknown'}
                         </p>
                       </div>
 
                       {/* Stats */}
                       <div className="text-right flex-shrink-0">
                         <p className="text-lg font-bold text-yellow-600">
-                          {user.totalEarnings}
+                          {user.totalEarnings ?? 0}
                         </p>
                         <p className="text-xs text-gray-600">points</p>
                       </div>

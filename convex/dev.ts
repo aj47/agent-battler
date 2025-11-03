@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -152,7 +152,7 @@ export const approvePullRequestDev = mutation({
   },
 });
 
-export const insertTestUser = mutation({
+export const insertTestUser = internalMutation({
   args: {
     githubId: v.string(),
     githubUsername: v.string(),
@@ -177,7 +177,7 @@ export const insertTestUser = mutation({
   },
 });
 
-export const updateUserEarnings = mutation({
+export const updateUserEarnings = internalMutation({
   args: {
     userId: v.id("users"),
     totalEarnings: v.number(),
