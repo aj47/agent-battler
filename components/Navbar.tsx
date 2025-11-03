@@ -62,7 +62,7 @@ export function Navbar() {
                 <div className="hidden md:flex md:items-center md:space-x-4">
                   <Link
                     href="/notifications"
-                    className="relative p-2 text-gray-600 hover:text-gray-900"
+                    className="relative inline-flex items-center p-2 text-gray-600 hover:text-gray-900"
                   >
                     <Bell className="h-5 w-5" />
                     {unreadCount && unreadCount > 0 && (

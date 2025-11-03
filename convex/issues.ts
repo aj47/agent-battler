@@ -307,3 +307,51 @@ export const searchIssues = query({
   },
 });
 
+/**
+ * Get top 3 issues for homepage display
+ * Sorted by bounty amount (descending) and recency
+ */
+export const getTopIssues = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 3;
+
+    // Get all open issues
+    let issues = await ctx.db
+      .query("issues")
+      .filter((q) => q.eq(q.field("status"), "open"))
+      .collect();
+
+    // Sort by bounty amount (descending), then by creation date (descending)
+    issues.sort((a, b) => {
+      if (b.bountyAmount !== a.bountyAmount) {
+        return b.bountyAmount - a.bountyAmount;
+      }
+      return b.createdAt - a.createdAt;
+    });
+
+    // Take top N issues
+    const topIssues = issues.slice(0, limit);
+
+    // Enrich with creator information
+    const enrichedIssues = await Promise.all(
+      topIssues.map(async (issue) => {
+        const creator = await ctx.db.get(issue.creatorId);
+        return {
+          ...issue,
+          creator: creator ? {
+            _id: creator._id,
+            name: creator.name,
+            githubUsername: creator.githubUsername,
+            image: creator.image,
+          } : null,
+        };
+      })
+    );
+
+    return enrichedIssues;
+  },
+});
+

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { Code2, Trophy, GitPullRequest, DollarSign, ArrowRight, TrendingUp, Medal, Award } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import { IssueCard } from "@/components/IssueCard";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function Home() {
   const topUsers = useQuery(api.users.getLeaderboard, { limit: 4 });
   const agentStats = useQuery(api.codingAgents.getCodingAgentStats);
+  const topIssues = useQuery(api.issues.getTopIssues, { limit: 3 });
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <Navbar />
@@ -300,6 +302,53 @@ export default function Home() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Top Issues Section */}
+        <div className="mt-24">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Featured Issues
+              </h2>
+              <p className="text-gray-600">
+                Top bounty issues waiting to be solved
+              </p>
+            </div>
+            <Link
+              href="/issues"
+              className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
+            >
+              View all issues
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </div>
+
+          {!topIssues ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading featured issues...</p>
+            </div>
+          ) : topIssues.length > 0 ? (
+            <div className="grid gap-6">
+              {topIssues.map((issue) => (
+                <IssueCard key={issue._id} issue={issue} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <p className="text-gray-600">No issues available yet.</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Be the first to post an issue with a bounty!
+              </p>
+              <Link
+                href="/issues/create"
+                className="inline-flex items-center justify-center px-6 py-2 mt-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                Post an Issue
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
