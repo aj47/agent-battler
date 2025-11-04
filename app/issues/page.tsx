@@ -9,7 +9,7 @@ import { Search, Filter } from "lucide-react";
 
 export default function IssuesPage() {
   const [searchText, setSearchText] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"open" | "in_progress" | "resolved" | "closed" | undefined>("open");
+  const [statusFilter, setStatusFilter] = useState<"open" | "in_progress" | "resolved" | "closed" | undefined>(undefined);
   const [difficultyFilter, setDifficultyFilter] = useState<"easy" | "medium" | "hard" | undefined>();
   const [sortBy, setSortBy] = useState<"bounty_desc" | "bounty_asc" | "recent" | "oldest">("bounty_desc");
 
