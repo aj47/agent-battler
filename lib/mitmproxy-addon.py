@@ -19,7 +19,16 @@ class NetworkLogger:
     def __init__(self):
         self.requests = []
         self.logfile = "network-capture.json"
-        
+
+    def load(self, loader):
+        """Called when the addon is loaded."""
+        loader.add_option(
+            name="logfile",
+            typespec=str,
+            default="network-capture.json",
+            help="Path to the output JSON log file",
+        )
+
     def configure(self, updated):
         """Called when configuration changes."""
         if "logfile" in updated:

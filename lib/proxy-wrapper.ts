@@ -25,7 +25,14 @@ export class ProxyWrapper {
       verbose: false,
       ...config,
     };
-    this.addonScript = path.join(__dirname, 'mitmproxy-addon.py');
+    // Look for addon script in lib folder (works for both compiled and source)
+    const possiblePaths = [
+      path.join(__dirname, 'mitmproxy-addon.py'), // When running from dist
+      path.join(__dirname, '..', 'lib', 'mitmproxy-addon.py'), // When running from dist
+      path.join(process.cwd(), 'lib', 'mitmproxy-addon.py'), // From project root
+    ];
+
+    this.addonScript = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
   }
 
   /**
