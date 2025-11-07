@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# CLI build output
+/dist
+
+# Agent Battler logs
+/agent-battler-logs
