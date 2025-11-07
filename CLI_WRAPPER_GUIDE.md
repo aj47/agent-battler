@@ -1,6 +1,6 @@
 # Agent Battler CLI Wrapper
 
-A command-line wrapper that captures network requests made by AI coding agents using mitmproxy, providing an alternative to asciicinema for recording agent sessions.
+A command-line wrapper that captures network requests made by AI coding agents using embedded mitmproxy, providing an alternative to asciicinema for recording agent sessions.
 
 ## Overview
 
@@ -10,45 +10,41 @@ Instead of recording terminal sessions with asciicinema, this CLI wrapper captur
 - 🔍 **Better debugging** - Analyze request/response data for troubleshooting
 - 📊 **Detailed metrics** - Track API usage, response times, and data transfer
 - 🎯 **Focused data** - Capture only the relevant network activity, not terminal noise
+- 🐍 **Pure Python** - No additional installations required, mitmproxy is embedded
 
 ## Installation
 
 ### Prerequisites
 
-1. **Node.js 18+** - Already required for Agent Battler
-2. **mitmproxy** - The network proxy tool
+**Python 3.8+** - That's it! mitmproxy is included as a dependency.
 
-#### Install mitmproxy
-
-**macOS (Homebrew):**
-```bash
-brew install mitmproxy
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get install mitmproxy
-```
-
-**Fedora:**
-```bash
-sudo dnf install mitmproxy
-```
-
-**Using pip:**
-```bash
-pip install mitmproxy
-```
-
-For more installation options, visit: https://mitmproxy.org/
-
-### Build the CLI
+### Install from source
 
 ```bash
-npm run build:cli
+# Clone the repository (if not already done)
+cd /path/to/agent-battler
+
+# Install the package with pip
+pip install -e .
+
+# Or install with all dependencies
+pip install -r requirements.txt
+pip install -e .
 ```
 
-This compiles the TypeScript CLI code to JavaScript.
+The `-e` flag installs in "editable" mode, so changes to the code are immediately available.
+
+### Install globally
+
+```bash
+# Install the package
+pip install .
+
+# Or from PyPI (when published)
+pip install agent-battler
+```
+
+That's it! The `agent-battler` command will be available globally.
 
 ## Usage
 
@@ -85,11 +81,12 @@ agent-battler copilot "Write unit tests for the user service"
 
 ## How It Works
 
-1. **Starts mitmproxy** - Launches a local proxy server on port 8080
-2. **Configures environment** - Sets HTTP_PROXY and HTTPS_PROXY environment variables
-3. **Executes agent command** - Runs the AI agent with the proxy configuration
-4. **Captures requests** - Logs all HTTP/HTTPS requests and responses
-5. **Saves to file** - Stores the captured data in JSON format
+1. **Embeds mitmproxy** - Uses mitmproxy's Python API directly (no separate process)
+2. **Starts proxy server** - Launches on port 8080 (configurable)
+3. **Configures environment** - Sets HTTP_PROXY and HTTPS_PROXY environment variables
+4. **Executes agent command** - Runs the AI agent with the proxy configuration
+5. **Captures requests** - Logs all HTTP/HTTPS requests and responses in real-time
+6. **Saves to file** - Stores the captured data in JSON format when done
 
 ## Output
 
@@ -143,25 +140,31 @@ This provides transparency about the agent's API usage and decision-making proce
 
 ## Development Mode
 
-For development, you can run the CLI without building:
+For development, you can run the CLI directly:
 
 ```bash
-# Install ts-node globally
-npm install -g ts-node
+# Run the module directly
+python -m agent_battler.cli claude "test instruction"
 
-# Run directly
-./bin/agent-battler.js claude "test instruction"
+# Or if installed in editable mode
+agent-battler claude "test instruction"
 ```
 
 ## Troubleshooting
 
-### "mitmproxy is not installed"
+### "No module named 'mitmproxy'"
 
-Install mitmproxy using one of the methods in the Installation section above.
+Install the dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-### "CLI not built"
+### "command not found: agent-battler"
 
-Run `npm run build:cli` to compile the TypeScript code.
+Install the package:
+```bash
+pip install -e .
+```
 
 ### SSL Certificate Errors
 
