@@ -102,19 +102,14 @@ class AugmentAdapter(AgentAdapter):
         env = os.environ.copy()
         env.update(proxy_env)
 
-        # Note: Auggie (Node.js based) may not respect HTTP_PROXY environment variables
-        # This is a known limitation of many Node.js applications
-        # For now, we'll set the variables and document the limitation
+        # Node.js v12+ supports NODE_USE_ENV_PROXY=1 to enable built-in proxy support
+        # This makes Node.js respect HTTP_PROXY and HTTPS_PROXY environment variables
+        env['NODE_USE_ENV_PROXY'] = '1'
+        env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'  # Disable SSL verification for proxy
 
-        print(f"⚠️  Note: Auggie may not respect proxy environment variables")
-        print(f"   This is a limitation of Node.js-based applications")
+        print(f"🔧 Configuring Node.js to use proxy (NODE_USE_ENV_PROXY=1)")
         print(f"   HTTP_PROXY: {proxy_env.get('HTTP_PROXY')}")
         print(f"   HTTPS_PROXY: {proxy_env.get('HTTPS_PROXY')}")
-        print()
-        print(f"   To capture Auggie's requests, you may need to:")
-        print(f"   1. Use system-wide proxy settings, or")
-        print(f"   2. Use a tool like proxychains, or")
-        print(f"   3. Configure Auggie to use a custom API endpoint")
         print()
 
         # Use auggie with --print flag for non-interactive mode
@@ -133,7 +128,8 @@ class AugmentAdapter(AgentAdapter):
             print(stdout.decode())
         if stderr:
             stderr_text = stderr.decode()
-            if stderr_text.strip():
+            # Filter out NODE_TLS_REJECT_UNAUTHORIZED warning
+            if stderr_text.strip() and 'NODE_TLS_REJECT_UNAUTHORIZED' not in stderr_text:
                 print(stderr_text, file=sys.stderr)
 
         return process.returncode
