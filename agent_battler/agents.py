@@ -102,6 +102,21 @@ class AugmentAdapter(AgentAdapter):
         env = os.environ.copy()
         env.update(proxy_env)
 
+        # Note: Auggie (Node.js based) may not respect HTTP_PROXY environment variables
+        # This is a known limitation of many Node.js applications
+        # For now, we'll set the variables and document the limitation
+
+        print(f"⚠️  Note: Auggie may not respect proxy environment variables")
+        print(f"   This is a limitation of Node.js-based applications")
+        print(f"   HTTP_PROXY: {proxy_env.get('HTTP_PROXY')}")
+        print(f"   HTTPS_PROXY: {proxy_env.get('HTTPS_PROXY')}")
+        print()
+        print(f"   To capture Auggie's requests, you may need to:")
+        print(f"   1. Use system-wide proxy settings, or")
+        print(f"   2. Use a tool like proxychains, or")
+        print(f"   3. Configure Auggie to use a custom API endpoint")
+        print()
+
         # Use auggie with --print flag for non-interactive mode
         process = await asyncio.create_subprocess_exec(
             "auggie",
@@ -117,7 +132,9 @@ class AugmentAdapter(AgentAdapter):
         if stdout:
             print(stdout.decode())
         if stderr:
-            print(stderr.decode(), file=sys.stderr)
+            stderr_text = stderr.decode()
+            if stderr_text.strip():
+                print(stderr_text, file=sys.stderr)
 
         return process.returncode
 

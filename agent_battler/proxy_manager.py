@@ -14,11 +14,17 @@ from mitmproxy import ctx
 
 class NetworkCapture:
     """Addon for capturing network requests and responses."""
-    
-    def __init__(self, log_file: str):
+
+    def __init__(self, log_file: str, verbose: bool = False):
         self.log_file = log_file
         self.requests: List[Dict[str, Any]] = []
-    
+        self.verbose = verbose
+
+    def clientconnect(self, layer):
+        """Called when a client connects to the proxy."""
+        if self.verbose:
+            ctx.log.info(f"Client connected: {layer.client_conn.peername}")
+
     def request(self, flow: http.HTTPFlow) -> None:
         """Called when a request is received."""
         request_data = {
@@ -104,19 +110,26 @@ class ProxyManager:
             listen_port=self.port,
             http2=True,
         )
-        
+
+        if self.verbose:
+            print(f"[Proxy] Starting mitmproxy on port {self.port}")
+            print(f"[Proxy] Log file: {self.log_file}")
+
         # Create the master
         self.master = DumpMaster(opts)
-        
+
         # Create and add our addon
-        self.addon = NetworkCapture(self.log_file)
+        self.addon = NetworkCapture(self.log_file, verbose=self.verbose)
         self.master.addons.add(self.addon)
-        
+
         # Start the proxy in a background task
         self._task = asyncio.create_task(self._run_proxy())
-        
+
         # Give it a moment to start
         await asyncio.sleep(1)
+
+        if self.verbose:
+            print(f"[Proxy] Proxy is running and ready to accept connections")
     
     async def _run_proxy(self) -> None:
         """Run the proxy server."""
