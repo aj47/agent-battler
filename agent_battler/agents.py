@@ -80,28 +80,46 @@ class ClaudeAdapter(AgentAdapter):
 
 
 class AugmentAdapter(AgentAdapter):
-    """Adapter for Augment (typically IDE-based)."""
-    
+    """Adapter for Augment CLI (auggie)."""
+
     def __init__(self):
         super().__init__("auggie")
-    
+
     def is_available(self) -> bool:
-        """Augment is IDE-based, not a CLI tool."""
-        return False
-    
+        """Check if auggie CLI is available."""
+        try:
+            result = subprocess.run(
+                ["which", "auggie"],
+                capture_output=True,
+                text=True
+            )
+            return result.returncode == 0
+        except:
+            return False
+
     async def execute(self, instruction: str, proxy_env: Dict[str, str]) -> int:
-        """Augment doesn't have a CLI - this is informational."""
-        print("ℹ️  Augment is an IDE extension, not a CLI tool.")
-        print("   To capture Augment's network requests:")
-        print("   1. Configure your IDE to use the proxy:")
-        print(f"      HTTP_PROXY={proxy_env.get('HTTP_PROXY')}")
-        print(f"      HTTPS_PROXY={proxy_env.get('HTTPS_PROXY')}")
-        print("   2. Use Augment in your IDE while the proxy is running")
-        print("   3. Network requests will be captured automatically")
-        print()
-        print("   Waiting for 30 seconds to capture requests...")
-        await asyncio.sleep(30)
-        return 0
+        """Execute auggie CLI with the instruction."""
+        env = os.environ.copy()
+        env.update(proxy_env)
+
+        # Use auggie with --print flag for non-interactive mode
+        process = await asyncio.create_subprocess_exec(
+            "auggie",
+            "--print",
+            instruction,
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await process.communicate()
+
+        if stdout:
+            print(stdout.decode())
+        if stderr:
+            print(stderr.decode(), file=sys.stderr)
+
+        return process.returncode
 
 
 class CursorAdapter(AgentAdapter):
