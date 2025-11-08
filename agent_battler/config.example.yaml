@@ -13,17 +13,17 @@ agents:
     env:
       ANTHROPIC_API_KEY: "your-api-key-here"
   
-  # Augment - IDE extension
+  # Augment - CLI tool (auggie)
   auggie:
-    type: ide
-    # Augment runs in your IDE, not as a CLI
-    # Configure your IDE to use the proxy when this tool is running
-    ide_name: "VS Code / Cursor / etc"
+    type: cli
+    # Auggie CLI is installed via npm
+    command: ["auggie", "--print"]
+    # Installation: npm install -g @augmentcode/auggie
     instructions: |
-      1. Start agent-battler with auggie
-      2. Configure your IDE's HTTP proxy settings to use localhost:8080
-      3. Use Augment in your IDE
-      4. Network requests will be captured automatically
+      1. Install: npm install -g @augmentcode/auggie
+      2. Run: agent-battler auggie "your instruction"
+      3. Auggie executes with proxy environment automatically
+      4. Network requests are captured
   
   # Cursor - AI-powered IDE
   cursor:

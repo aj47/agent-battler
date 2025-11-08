@@ -8,7 +8,7 @@ The Agent Battler CLI now supports **real agent execution** with proper network 
 
 ### 1. CLI-Based Agents
 
-**Examples**: Claude CLI (if it exists), custom CLI tools
+**Examples**: Auggie CLI, Claude CLI (if it exists), custom CLI tools
 
 **How it works**:
 - Executes the agent command directly
@@ -31,7 +31,7 @@ process = await asyncio.create_subprocess_exec(
 
 ### 2. IDE-Based Agents
 
-**Examples**: Augment, Cursor, GitHub Copilot, Codeium
+**Examples**: Cursor, GitHub Copilot, Codeium
 
 **How it works**:
 - Starts the proxy server
@@ -100,9 +100,9 @@ class AgentAdapter(ABC):
 - Falls back to API instructions if CLI not found
 
 **AugmentAdapter**
-- IDE-based, no CLI
-- Provides IDE configuration instructions
-- 30-second capture window
+- CLI-based (auggie command)
+- Executes `auggie --print` with proxy environment
+- Captures all network requests automatically
 
 **CursorAdapter**
 - Detects Cursor installation

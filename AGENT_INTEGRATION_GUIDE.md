@@ -84,29 +84,40 @@ kill $PROXY_PID
 
 ### Augment (Auggie)
 
-**Type**: IDE extension
+**Type**: CLI tool
 
-**Steps**:
+**Installation**:
+```bash
+npm install -g @augmentcode/auggie
+```
 
-1. Start the proxy:
-   ```bash
-   agent-battler auggie "your task"
-   ```
+**Usage**:
 
-2. Configure your IDE to use the proxy:
-   - **VS Code**: Settings → Proxy → `http://localhost:8080`
-   - **Cursor**: Settings → Proxy → `http://localhost:8080`
-   - **Or set system proxy** (macOS):
-     ```bash
-     networksetup -setwebproxy "Wi-Fi" localhost 8080
-     networksetup -setsecurewebproxy "Wi-Fi" localhost 8080
-     ```
+Auggie CLI is automatically executed with the proxy environment configured:
 
-3. Use Augment in your IDE normally
+```bash
+agent-battler auggie "print hello world"
+```
 
-4. Network requests will be captured automatically
+This will:
+1. Start the mitmproxy server
+2. Execute `auggie --print "print hello world"` with proxy environment variables
+3. Capture all network requests made by Auggie
+4. Save the captured data to JSON
 
-5. When done, stop the proxy (Ctrl+C) and disable proxy settings
+**How it works**:
+- The adapter uses `auggie --print` for non-interactive mode
+- Proxy environment variables (HTTP_PROXY, HTTPS_PROXY) are automatically set
+- All API calls made by Auggie are captured through the proxy
+- Output is displayed in real-time
+
+**Example**:
+```bash
+agent-battler auggie "create a hello world function in Python"
+# Auggie executes the task
+# All network requests are captured
+# Results saved to agent-battler-logs/auggie-*.json
+```
 
 ### Cursor
 
