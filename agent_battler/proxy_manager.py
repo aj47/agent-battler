@@ -39,13 +39,16 @@ class NetworkCapture:
             "content_length": len(flow.request.content) if flow.request.content else 0,
         }
         
-        # Log request body for POST/PUT/PATCH (but limit size)
+        # Log request body for POST/PUT/PATCH (increased limit to capture full messages)
         if flow.request.method in ["POST", "PUT", "PATCH"]:
-            if flow.request.content and len(flow.request.content) < 10000:
+            if flow.request.content and len(flow.request.content) < 1000000:  # 1MB limit
                 try:
                     request_data["body"] = flow.request.text
                 except:
                     request_data["body"] = "<binary data>"
+            elif flow.request.content:
+                # For very large bodies, store metadata
+                request_data["body"] = f"<body too large: {len(flow.request.content)} bytes>"
         
         self.requests.append(request_data)
         ctx.log.info(f"Request: {flow.request.method} {flow.request.pretty_url}")
@@ -62,12 +65,15 @@ class NetworkCapture:
             "content_length": len(flow.response.content) if flow.response.content else 0,
         }
         
-        # Log response body for small responses
-        if flow.response.content and len(flow.response.content) < 10000:
+        # Log response body (increased limit to capture full messages)
+        if flow.response.content and len(flow.response.content) < 1000000:  # 1MB limit
             try:
                 response_data["body"] = flow.response.text
             except:
                 response_data["body"] = "<binary data>"
+        elif flow.response.content:
+            # For very large bodies, store metadata
+            response_data["body"] = f"<body too large: {len(flow.response.content)} bytes>"
         
         self.requests.append(response_data)
         ctx.log.info(f"Response: {flow.response.status_code} {flow.request.pretty_url}")
