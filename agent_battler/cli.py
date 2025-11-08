@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 import asyncio
 from .proxy_manager import ProxyManager
+from .agents import get_agent_adapter
 
 SUPPORTED_AGENTS = ['claude', 'auggie', 'cursor', 'copilot', 'codeium', 'chatgpt']
 
@@ -134,19 +135,37 @@ async def execute_agent(
     verbose: bool
 ) -> None:
     """Execute the agent command with proxy configuration."""
-    
-    print(f"⚠️  Note: This is a demonstration implementation.")
-    print(f"    To fully integrate with {agent}, you would need to:")
-    print(f"    1. Configure {agent} to use the proxy")
-    print(f"    2. Execute the actual {agent} command")
-    print(f"    3. Pass the instruction to the agent")
-    print()
-    print("For now, simulating a 5-second agent execution...")
-    
-    # Simulate agent execution
-    await asyncio.sleep(5)
-    
-    print(f"✅ {agent} execution completed (simulated)")
+
+    # Get the agent adapter
+    adapter = get_agent_adapter(agent)
+
+    if not adapter:
+        print(f"❌ Error: No adapter found for agent '{agent}'")
+        return
+
+    # Check if agent is available
+    if verbose:
+        is_available = adapter.is_available()
+        if is_available:
+            print(f"✅ {agent} is available on this system")
+        else:
+            print(f"⚠️  {agent} CLI not found - will provide manual instructions")
+
+    # Get proxy environment variables
+    proxy_env = proxy_manager.get_proxy_env()
+
+    # Execute the agent
+    try:
+        exit_code = await adapter.execute(instruction, proxy_env)
+        if exit_code == 0:
+            print(f"✅ {agent} execution completed successfully")
+        else:
+            print(f"⚠️  {agent} execution completed with exit code {exit_code}")
+    except Exception as e:
+        print(f"❌ Error executing {agent}: {e}")
+        if verbose:
+            import traceback
+            traceback.print_exc()
 
 
 def main():
