@@ -1,0 +1,92 @@
+# Agent Battler Configuration
+# Copy this file to ~/.agent-battler/config.yaml and customize for your setup
+
+agents:
+  # Claude - Anthropic's AI assistant
+  claude:
+    type: api
+    # If you have a Claude CLI tool, specify the command here
+    command: null
+    # Or use the API directly with a Python script
+    api_script: null
+    # Environment variables to set
+    env:
+      ANTHROPIC_API_KEY: "your-api-key-here"
+  
+  # Augment - CLI tool (auggie)
+  auggie:
+    type: cli
+    # Auggie CLI is installed via npm
+    command: ["auggie", "--print"]
+    # Installation: npm install -g @augmentcode/auggie
+    instructions: |
+      1. Install: npm install -g @augmentcode/auggie
+      2. Run: agent-battler auggie "your instruction"
+      3. Auggie executes with proxy environment automatically
+      4. Network requests are captured
+  
+  # Cursor - AI-powered IDE
+  cursor:
+    type: ide
+    # Path to Cursor executable (if you want to launch it)
+    executable: "/Applications/Cursor.app/Contents/MacOS/Cursor"
+    # Or just provide instructions for manual use
+    instructions: |
+      1. Start agent-battler with cursor
+      2. Open Cursor IDE
+      3. Configure proxy in Cursor settings or system settings
+      4. Use Cursor's AI features
+      5. Network requests will be captured
+  
+  # GitHub Copilot
+  copilot:
+    type: ide
+    # Copilot runs in your IDE/editor
+    instructions: |
+      1. Start agent-battler with copilot
+      2. Configure your editor to use HTTP proxy localhost:8080
+      3. Use GitHub Copilot
+      4. Network requests will be captured
+  
+  # Codeium
+  codeium:
+    type: ide
+    instructions: |
+      1. Start agent-battler with codeium
+      2. Configure your editor to use HTTP proxy localhost:8080
+      3. Use Codeium
+      4. Network requests will be captured
+  
+  # ChatGPT - OpenAI's API
+  chatgpt:
+    type: api
+    # If you have a ChatGPT CLI wrapper
+    command: null
+    # Or use the API with a Python script
+    api_script: null
+    env:
+      OPENAI_API_KEY: "your-api-key-here"
+
+# Custom agents - add your own!
+# custom_agent:
+#   type: cli
+#   command: ["my-agent-cli", "--prompt"]
+#   env:
+#     MY_AGENT_API_KEY: "key-here"
+
+# Proxy settings
+proxy:
+  default_port: 8080
+  # SSL certificate verification (disable for HTTPS interception)
+  verify_ssl: false
+  
+# Output settings
+output:
+  default_dir: "./agent-battler-logs"
+  # Include request/response bodies in logs
+  include_bodies: true
+  # Maximum body size to log (in bytes)
+  max_body_size: 10000
+  # Pretty print JSON output
+  pretty_print: true
+
