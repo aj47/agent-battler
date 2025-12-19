@@ -1,19 +1,19 @@
-# Agent Battler 🤖⚔️
+# Builder Community 🔨
 
-A platform where developers can post GitHub issues with bounties and contributors can submit pull requests using their favorite AI coding agents. Track which AI agents win the most bounties!
-
-https://agent-battler.vercel.app/
-
-<img width="2316" height="2208" alt="Image" src="https://github.com/user-attachments/assets/0414f9fd-c86f-4d75-85c2-5451068eef0c" />
+A platform where developers submit their projects and help each other build. Earn points by contributing to community projects and unlock exclusive rewards!
 
 ## Features
 
 - **GitHub OAuth Authentication**: Seamless sign-in with GitHub
-- **Issue Management**: Post GitHub issues with bounty rewards
-- **PR Submissions**: Submit PRs and specify which AI coding agent you used
-- **Terminal Session Recordings**: Share asciicinema recordings of your agent working on issues
-- **Bounty System**: Earn points for approved PRs
-- **Agent Leaderboard**: Track which AI coding agents are most successful
+- **Project Submissions**: Submit your GitHub projects seeking community help
+- **Contribution Tracking**: Track and verify community contributions
+- **Points & Tiers System**: Earn points for verified contributions
+  - PR Merged: 50 points
+  - Issue Resolved: 30 points
+  - Feedback Accepted: 20 points
+- **Tier Progression**: Advance through Builder → Contributor → Core → Architect
+- **Rewards System**: Redeem points for Discord roles, shoutouts, and stream features
+- **Leaderboard**: Track top contributors by week, month, or all-time
 - **Real-time Updates**: Built with Convex for real-time data synchronization
 
 ## Tech Stack
@@ -37,7 +37,7 @@ https://agent-battler.vercel.app/
 1. **Clone the repository**
    ```bash
    git clone <your-repo-url>
-   cd AgentBattler2
+   cd agent-battler
    ```
 
 2. **Install dependencies**
@@ -61,7 +61,7 @@ https://agent-battler.vercel.app/
    b. Click "New OAuth App"
 
    c. Fill in the details:
-      - **Application name**: Agent Battler (or your preferred name)
+      - **Application name**: Builder Community (or your preferred name)
       - **Homepage URL**: `http://localhost:3000`
       - **Authorization callback URL**: `https://your-deployment.convex.site/api/auth/callback/github`
         (Replace `your-deployment` with your actual Convex deployment URL from `.env.local`)
@@ -74,11 +74,11 @@ https://agent-battler.vercel.app/
       AUTH_GITHUB_SECRET=your_github_client_secret
       ```
 
-5. **Seed the database with coding agents**
+5. **Seed the rewards database**
 
    Open the Convex dashboard and run:
    ```bash
-   npx convex run codingAgents:seedCodingAgents
+   npx convex run rewards:triggerSeedRewards
    ```
 
 6. **Start the development server**
@@ -95,21 +95,28 @@ https://agent-battler.vercel.app/
 ```
 ├── app/                    # Next.js app directory
 │   ├── auth/              # Authentication pages
-│   ├── issues/            # Issue-related pages
+│   ├── projects/          # Project-related pages
+│   ├── dashboard/         # User dashboard
+│   ├── leaderboard/       # Contributor leaderboard
+│   ├── rewards/           # Rewards redemption
 │   ├── layout.tsx         # Root layout with providers
 │   └── page.tsx           # Home page
 ├── components/            # React components
 │   ├── Navbar.tsx         # Navigation component
-│   ├── IssueCard.tsx      # Issue display card
-│   └── Button.tsx         # Reusable button component
+│   ├── ProjectCard.tsx    # Project display card
+│   ├── ContributionForm.tsx # Contribution submission form
+│   ├── PointsBadge.tsx    # Points and tier display
+│   ├── RewardCard.tsx     # Reward display card
+│   └── CommentSection.tsx # Project discussions
 ├── convex/                # Convex backend
 │   ├── schema.ts          # Database schema
 │   ├── auth.ts            # Authentication config
 │   ├── github.ts          # GitHub API integration
 │   ├── users.ts           # User management
-│   ├── issues.ts          # Issue management
-│   ├── pullRequests.ts    # PR management
-│   ├── codingAgents.ts    # Coding agent management
+│   ├── projects.ts        # Project management
+│   ├── contributions.ts   # Contribution tracking
+│   ├── rewards.ts         # Rewards system
+│   ├── comments.ts        # Comment system
 │   └── notifications.ts   # Notification system
 └── public/                # Static assets
 ```
@@ -130,27 +137,41 @@ AUTH_GITHUB_SECRET=your_github_client_secret
 
 ## Usage
 
-### For Issue Creators
+### For Project Owners
 
 1. Sign in with GitHub
-2. Click "Post Issue"
-3. Select a repository and issue
-4. Set a bounty amount
-5. Post to the platform
+2. Click "Submit Project"
+3. Enter your GitHub repository URL
+4. Describe what kind of help you need
+5. Add relevant tags
+6. Review and verify contributions from the community
 
 ### For Contributors
 
 1. Sign in with GitHub
-2. Browse available issues
-3. Work on a solution using your favorite AI coding agent
-4. (Optional) Record your terminal session with [asciinema](https://asciinema.org)
-5. Submit a PR on GitHub
-6. Link your PR on the platform and specify which agent you used
-7. (Optional) Share your terminal recording to show your workflow
-8. Wait for approval to earn the bounty
+2. Browse available projects
+3. Pick a project and contribute (fix issues, submit PRs, provide feedback)
+4. Submit your contribution with a link to your GitHub PR/issue
+5. Wait for the project owner to verify
+6. Earn points and unlock rewards!
 
-**📹 Recording Your Session:**
-See [ASCIICINEMA_GUIDE.md](ASCIICINEMA_GUIDE.md) for a complete guide on recording terminal sessions.
+### Tier System
+
+| Tier | Points Required |
+|------|-----------------|
+| Builder | 0+ |
+| Contributor | 100+ |
+| Core | 500+ |
+| Architect | 1000+ |
+
+### Available Rewards
+
+- Discord Builder Role (50 pts)
+- Discord Contributor Role (100 pts)
+- Discord Core Role (500 pts)
+- Social Media Shoutout (200 pts)
+- 15-min Stream Feature (500 pts)
+- Full Dedicated Stream (1000 pts)
 
 ## Deployment
 

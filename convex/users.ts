@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
 import { Octokit } from "octokit";
 import type { Doc } from "./_generated/dataModel";
-
+import { calculateTier, TIER_THRESHOLDS } from "./contributions";
 
 /**
  * Get or create user profile
@@ -44,9 +44,8 @@ export const getOrCreateUser = mutation({
       email: args.email,
       image: args.image,
       githubAccessToken: args.githubAccessToken,
-      totalEarnings: 0,
-      totalBountiesPosted: 0,
-      totalPRsSubmitted: 0,
+      totalPoints: 0,
+      tier: "builder",
       createdAt: Date.now(),
     });
 
@@ -102,6 +101,7 @@ export const updateUserProfile = mutation({
   args: {
     name: v.optional(v.string()),
     email: v.optional(v.string()),
+    discordId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
@@ -109,17 +109,19 @@ export const updateUserProfile = mutation({
       throw new Error("Not authenticated");
     }
 
-    await ctx.db.patch(userId, {
-      name: args.name,
-      email: args.email,
-    });
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.email !== undefined) updates.email = args.email;
+    if (args.discordId !== undefined) updates.discordId = args.discordId;
+
+    await ctx.db.patch(userId, updates);
 
     return userId;
   },
 });
 
 /**
- * Get user statistics
+ * Get user statistics for Builder Community
  */
 export const getUserStats = query({
   args: { userId: v.id("users") },
@@ -129,50 +131,83 @@ export const getUserStats = query({
       return null;
     }
 
-    // Get issues posted by user
-    const issuesPosted = await ctx.db
-      .query("issues")
-      .withIndex("by_creator", (q) => q.eq("creatorId", args.userId))
+    // Get projects owned by user
+    const projectsOwned = await ctx.db
+      .query("projects")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
       .collect();
 
-    // Get PRs submitted by user
-    const prsSubmitted = await ctx.db
-      .query("pullRequests")
-      .withIndex("by_submitter", (q) => q.eq("submitterId", args.userId))
+    // Get contributions made by user
+    const contributions = await ctx.db
+      .query("contributions")
+      .withIndex("by_contributor", (q) => q.eq("contributorId", args.userId))
       .collect();
 
-    // Get bounties won
-    const bountiesWon = await ctx.db
-      .query("bountyTransactions")
-      .withIndex("by_to_user", (q) => q.eq("toUserId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "completed"))
+    const verifiedContributions = contributions.filter(
+      (c) => c.status === "verified"
+    );
+
+    // Get redemptions by user
+    const redemptions = await ctx.db
+      .query("redemptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
-    // Get bounties paid
-    const bountiesPaid = await ctx.db
-      .query("bountyTransactions")
-      .withIndex("by_from_user", (q) => q.eq("fromUserId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
+    // Calculate next tier info
+    const currentPoints = user.totalPoints ?? 0;
+    const currentTier = user.tier ?? "builder";
+    let nextTier: string | null = null;
+    let pointsToNextTier = 0;
+
+    if (currentTier === "builder") {
+      nextTier = "contributor";
+      pointsToNextTier = TIER_THRESHOLDS.contributor - currentPoints;
+    } else if (currentTier === "contributor") {
+      nextTier = "core";
+      pointsToNextTier = TIER_THRESHOLDS.core - currentPoints;
+    } else if (currentTier === "core") {
+      nextTier = "architect";
+      pointsToNextTier = TIER_THRESHOLDS.architect - currentPoints;
+    }
 
     return {
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        githubUsername: user.githubUsername,
+        image: user.image,
+        avatar_url: user.avatar_url,
+        totalPoints: currentPoints,
+        tier: currentTier,
+        discordId: user.discordId,
+      },
       stats: {
-        issuesPosted: issuesPosted.length,
-        issuesResolved: issuesPosted.filter((i) => i.status === "resolved").length,
-        prsSubmitted: prsSubmitted.length,
-        prsApproved: prsSubmitted.filter((pr) => pr.status === "approved").length,
-        prsMerged: prsSubmitted.filter((pr) => pr.status === "merged").length,
-        totalEarnings: user.totalEarnings ?? 0,
-        bountiesWon: bountiesWon.length,
-        totalBountiesPaid: bountiesPaid.reduce((sum, b) => sum + b.amount, 0),
+        projectsOwned: projectsOwned.length,
+        activeProjects: projectsOwned.filter((p) => p.status === "active")
+          .length,
+        contributionsMade: contributions.length,
+        contributionsVerified: verifiedContributions.length,
+        contributionsPending: contributions.filter((c) => c.status === "pending")
+          .length,
+        totalPointsEarned: verifiedContributions.reduce(
+          (sum, c) => sum + c.pointsAwarded,
+          0
+        ),
+        rewardsRedeemed: redemptions.length,
+        rewardsFulfilled: redemptions.filter((r) => r.status === "fulfilled")
+          .length,
+      },
+      tierInfo: {
+        currentTier,
+        nextTier,
+        pointsToNextTier: Math.max(0, pointsToNextTier),
       },
     };
   },
 });
 
 /**
- * Get leaderboard - top earners
+ * Get leaderboard - top contributors by points
  */
 export const getLeaderboard = query({
   args: {
@@ -181,23 +216,23 @@ export const getLeaderboard = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
 
-    const users = await ctx.db
-      .query("users")
-      .order("desc")
-      .collect();
+    const users = await ctx.db.query("users").collect();
 
-    // Sort by total earnings
+    // Sort by total points
     const sortedUsers = users
-      .sort((a, b) => (b.totalEarnings ?? 0) - (a.totalEarnings ?? 0))
+      .filter((u) => (u.totalPoints ?? 0) > 0)
+      .sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
       .slice(0, limit);
 
-    return sortedUsers.map((user) => ({
+    return sortedUsers.map((user, index) => ({
+      rank: index + 1,
       _id: user._id,
       name: user.name,
       githubUsername: user.githubUsername,
       image: user.image,
-      totalEarnings: user.totalEarnings,
-      totalPRsSubmitted: user.totalPRsSubmitted,
+      avatar_url: user.avatar_url,
+      totalPoints: user.totalPoints ?? 0,
+      tier: user.tier ?? "builder",
     }));
   },
 });
@@ -247,22 +282,20 @@ export const updateGitHubAccessToken = mutation({
 
     if (profile.avatar_url) {
       updates.image = profile.avatar_url;
+      updates.avatar_url = profile.avatar_url;
     }
 
     if (profile.email) {
       updates.email = profile.email;
     }
 
-    if (typeof existingUser.totalEarnings !== "number") {
-      updates.totalEarnings = 0;
+    // Initialize builder community fields if not set
+    if (typeof existingUser.totalPoints !== "number") {
+      updates.totalPoints = 0;
     }
 
-    if (typeof existingUser.totalBountiesPosted !== "number") {
-      updates.totalBountiesPosted = 0;
-    }
-
-    if (typeof existingUser.totalPRsSubmitted !== "number") {
-      updates.totalPRsSubmitted = 0;
+    if (!existingUser.tier) {
+      updates.tier = "builder";
     }
 
     if (!existingUser.createdAt) {
@@ -275,3 +308,57 @@ export const updateGitHubAccessToken = mutation({
   },
 });
 
+/**
+ * Get current user's tier info
+ */
+export const getCurrentUserTierInfo = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await auth.getUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      return null;
+    }
+
+    const currentPoints = user.totalPoints ?? 0;
+    const currentTier = user.tier ?? calculateTier(currentPoints);
+
+    let nextTier: string | null = null;
+    let pointsToNextTier = 0;
+    let progress = 0;
+
+    if (currentTier === "builder") {
+      nextTier = "contributor";
+      pointsToNextTier = TIER_THRESHOLDS.contributor - currentPoints;
+      progress = (currentPoints / TIER_THRESHOLDS.contributor) * 100;
+    } else if (currentTier === "contributor") {
+      nextTier = "core";
+      pointsToNextTier = TIER_THRESHOLDS.core - currentPoints;
+      progress =
+        ((currentPoints - TIER_THRESHOLDS.contributor) /
+          (TIER_THRESHOLDS.core - TIER_THRESHOLDS.contributor)) *
+        100;
+    } else if (currentTier === "core") {
+      nextTier = "architect";
+      pointsToNextTier = TIER_THRESHOLDS.architect - currentPoints;
+      progress =
+        ((currentPoints - TIER_THRESHOLDS.core) /
+          (TIER_THRESHOLDS.architect - TIER_THRESHOLDS.core)) *
+        100;
+    } else {
+      progress = 100;
+    }
+
+    return {
+      currentTier,
+      currentPoints,
+      nextTier,
+      pointsToNextTier: Math.max(0, pointsToNextTier),
+      progress: Math.min(100, Math.max(0, progress)),
+    };
+  },
+});

@@ -5,21 +5,20 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { MessageSquare, Reply, Edit2, Trash2, Send } from "lucide-react";
-import { Button } from "./Button";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface CommentSectionProps {
-  issueId: Id<"issues">;
+  projectId: Id<"projects">;
   currentUserId?: Id<"users">;
-  issueCreatorId: Id<"users">;
+  projectOwnerId: Id<"users">;
 }
 
-export function CommentSection({ issueId, currentUserId, issueCreatorId }: CommentSectionProps) {
+export function CommentSection({ projectId, currentUserId, projectOwnerId }: CommentSectionProps) {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const comments = useQuery(api.comments.getCommentsByIssue, { issueId });
-  const commentCount = useQuery(api.comments.getCommentCount, { issueId });
+  const comments = useQuery(api.comments.getCommentsByProject, { projectId });
+  const commentCount = useQuery(api.comments.getCommentCount, { projectId });
   const createComment = useMutation(api.comments.createComment);
 
   const handleSubmitComment = async (e: React.FormEvent) => {
@@ -29,7 +28,7 @@ export function CommentSection({ issueId, currentUserId, issueCreatorId }: Comme
     setIsSubmitting(true);
     try {
       await createComment({
-        issueId,
+        projectId,
         content: newComment,
       });
       setNewComment("");
@@ -42,10 +41,10 @@ export function CommentSection({ issueId, currentUserId, issueCreatorId }: Comme
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-[#111111] border border-[#222222] rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-          <MessageSquare className="w-5 h-5 mr-2" />
+        <h2 className="text-xl font-semibold text-white flex items-center">
+          <MessageSquare className="w-5 h-5 mr-2 text-[#00FF41]" />
           Discussion ({commentCount ?? 0})
         </h2>
       </div>
@@ -58,37 +57,40 @@ export function CommentSection({ issueId, currentUserId, issueCreatorId }: Comme
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder="Share your thoughts, ask questions, or provide updates..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 placeholder:text-gray-500"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg focus:ring-2 focus:ring-[#00FF41] focus:border-transparent resize-none text-white placeholder:text-gray-500"
               rows={4}
             />
           </div>
           <div className="flex justify-end">
-            <Button
+            <button
               type="submit"
-              variant="primary"
               disabled={!newComment.trim() || isSubmitting}
-              isLoading={isSubmitting}
+              className="flex items-center px-4 py-2 bg-[#00FF41] text-black font-medium rounded-lg hover:bg-[#00FF41]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <Send className="w-4 h-4 mr-2" />
+              {isSubmitting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
               Post Comment
-            </Button>
+            </button>
           </div>
         </form>
       ) : (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
-          <p className="text-gray-600">Please sign in to join the discussion</p>
+        <div className="mb-6 p-4 bg-[#0A0A0A] border border-[#333333] rounded-lg text-center">
+          <p className="text-gray-400">Please sign in to join the discussion</p>
         </div>
       )}
 
       {/* Comments List */}
       {!comments ? (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading comments...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF41] mx-auto"></div>
+          <p className="mt-2 text-gray-400">Loading comments...</p>
         </div>
       ) : comments.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <MessageSquare className="w-12 h-12 mx-auto mb-3 text-gray-600" />
           <p>No comments yet. Be the first to share your thoughts!</p>
         </div>
       ) : (
@@ -97,9 +99,9 @@ export function CommentSection({ issueId, currentUserId, issueCreatorId }: Comme
             <Comment
               key={comment._id}
               comment={comment}
-              issueId={issueId}
+              projectId={projectId}
               currentUserId={currentUserId}
-              issueCreatorId={issueCreatorId}
+              projectOwnerId={projectOwnerId}
             />
           ))}
         </div>
@@ -110,13 +112,13 @@ export function CommentSection({ issueId, currentUserId, issueCreatorId }: Comme
 
 interface CommentProps {
   comment: any;
-  issueId: Id<"issues">;
+  projectId: Id<"projects">;
   currentUserId?: Id<"users">;
-  issueCreatorId: Id<"users">;
+  projectOwnerId: Id<"users">;
   isReply?: boolean;
 }
 
-function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = false }: CommentProps) {
+function Comment({ comment, projectId, currentUserId, projectOwnerId, isReply = false }: CommentProps) {
   const [isReplying, setIsReplying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [replyContent, setReplyContent] = useState("");
@@ -133,8 +135,8 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
   const deleteComment = useMutation(api.comments.deleteComment);
 
   const isAuthor = currentUserId === comment.userId;
-  const isIssueCreator = currentUserId === issueCreatorId;
-  const canDelete = isAuthor || isIssueCreator;
+  const isProjectOwner = currentUserId === projectOwnerId;
+  const canDelete = isAuthor || isProjectOwner;
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +145,7 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
     setIsSubmitting(true);
     try {
       await createReply({
-        issueId,
+        projectId,
         parentCommentId: comment._id,
         content: replyContent,
       });
@@ -198,13 +200,13 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    
+
     return date.toLocaleDateString();
   };
 
   return (
     <div className={`${isReply ? "ml-12" : ""}`}>
-      <div className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
+      <div className="border border-[#222222] rounded-lg p-4 bg-[#0A0A0A] hover:border-[#333333] transition-colors">
         {/* Comment Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
@@ -215,20 +217,20 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
                 className="w-10 h-10 rounded-full"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                <span className="text-gray-600 font-medium">
+              <div className="w-10 h-10 rounded-full bg-[#222222] flex items-center justify-center">
+                <span className="text-gray-400 font-medium">
                   {comment.user?.name?.[0]?.toUpperCase() || "?"}
                 </span>
               </div>
             )}
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-white">
                   {comment.user?.name || "Unknown User"}
                 </span>
-                {comment.userId === issueCreatorId && (
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    Author
+                {comment.userId === projectOwnerId && (
+                  <span className="px-2 py-0.5 bg-[#00FF41]/20 text-[#00FF41] text-xs rounded-full">
+                    Owner
                   </span>
                 )}
               </div>
@@ -246,7 +248,7 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
                 <>
                   <button
                     onClick={() => setIsEditing(!isEditing)}
-                    className="text-gray-500 hover:text-blue-600 p-1"
+                    className="text-gray-500 hover:text-[#00FF41] p-1 transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -256,7 +258,7 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
               {canDelete && (
                 <button
                   onClick={handleDeleteComment}
-                  className="text-gray-500 hover:text-red-600 p-1"
+                  className="text-gray-500 hover:text-red-500 p-1 transition-colors"
                   title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -272,33 +274,30 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 placeholder:text-gray-500"
+              className="w-full px-3 py-2 bg-[#111111] border border-[#333333] rounded-lg focus:ring-2 focus:ring-[#00FF41] focus:border-transparent resize-none text-white placeholder:text-gray-500"
               rows={3}
             />
             <div className="flex justify-end space-x-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
                 onClick={() => {
                   setIsEditing(false);
                   setEditContent(comment.content);
                 }}
+                className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Cancel
-              </Button>
-              <Button
-                variant="primary"
-                size="sm"
+              </button>
+              <button
                 onClick={handleUpdateComment}
                 disabled={!editContent.trim() || isSubmitting}
-                isLoading={isSubmitting}
+                className="px-3 py-1.5 text-sm bg-[#00FF41] text-black font-medium rounded-lg hover:bg-[#00FF41]/90 disabled:opacity-50 transition-colors"
               >
-                Save
-              </Button>
+                {isSubmitting ? "Saving..." : "Save"}
+              </button>
             </div>
           </div>
         ) : (
-          <div className="text-gray-700 mb-3">
+          <div className="text-gray-300 mb-3">
             <MarkdownRenderer content={comment.content} />
           </div>
         )}
@@ -308,7 +307,7 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
           {currentUserId && !isReply && (
             <button
               onClick={() => setIsReplying(!isReplying)}
-              className="flex items-center text-gray-600 hover:text-blue-600"
+              className="flex items-center text-gray-500 hover:text-[#00FF41] transition-colors"
             >
               <Reply className="w-4 h-4 mr-1" />
               Reply
@@ -317,7 +316,7 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
           {!isReply && comment.replyCount > 0 && (
             <button
               onClick={() => setShowReplies(!showReplies)}
-              className="flex items-center text-gray-600 hover:text-blue-600"
+              className="flex items-center text-gray-500 hover:text-[#00FF41] transition-colors"
             >
               <MessageSquare className="w-4 h-4 mr-1" />
               {showReplies ? "Hide" : "Show"} {comment.replyCount} {comment.replyCount === 1 ? "reply" : "replies"}
@@ -332,29 +331,27 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               placeholder="Write your reply..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-gray-900 placeholder:text-gray-500"
+              className="w-full px-3 py-2 bg-[#111111] border border-[#333333] rounded-lg focus:ring-2 focus:ring-[#00FF41] focus:border-transparent resize-none text-white placeholder:text-gray-500"
               rows={3}
             />
             <div className="flex justify-end space-x-2 mt-2">
-              <Button
-                variant="secondary"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => {
                   setIsReplying(false);
                   setReplyContent("");
                 }}
+                className="px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors"
               >
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 type="submit"
-                variant="primary"
-                size="sm"
                 disabled={!replyContent.trim() || isSubmitting}
-                isLoading={isSubmitting}
+                className="px-3 py-1.5 text-sm bg-[#00FF41] text-black font-medium rounded-lg hover:bg-[#00FF41]/90 disabled:opacity-50 transition-colors"
               >
-                Post Reply
-              </Button>
+                {isSubmitting ? "Posting..." : "Post Reply"}
+              </button>
             </div>
           </form>
         )}
@@ -367,9 +364,9 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
             <Comment
               key={reply._id}
               comment={reply}
-              issueId={issueId}
+              projectId={projectId}
               currentUserId={currentUserId}
-              issueCreatorId={issueCreatorId}
+              projectOwnerId={projectOwnerId}
               isReply={true}
             />
           ))}
@@ -378,4 +375,3 @@ function Comment({ comment, issueId, currentUserId, issueCreatorId, isReply = fa
     </div>
   );
 }
-

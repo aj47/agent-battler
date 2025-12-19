@@ -86,16 +86,14 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         updates.email = email;
       }
 
-      if (typeof existingUser.totalEarnings !== "number") {
-        updates.totalEarnings = 0;
+      // Initialize totalPoints if not set
+      if (typeof existingUser.totalPoints !== "number") {
+        updates.totalPoints = 0;
       }
 
-      if (typeof existingUser.totalBountiesPosted !== "number") {
-        updates.totalBountiesPosted = 0;
-      }
-
-      if (typeof existingUser.totalPRsSubmitted !== "number") {
-        updates.totalPRsSubmitted = 0;
+      // Initialize tier if not set
+      if (!existingUser.tier) {
+        updates.tier = "builder";
       }
 
       if (!existingUser.createdAt) {
