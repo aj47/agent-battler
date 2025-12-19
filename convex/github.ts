@@ -258,7 +258,7 @@ export const fetchGitHubUser = action({
   handler: async (ctx, args) => {
     try {
       const octokit = new Octokit({ auth: args.accessToken });
-      
+
       const { data } = await octokit.rest.users.getAuthenticated();
 
       return {
@@ -273,6 +273,168 @@ export const fetchGitHubUser = action({
     } catch (error: any) {
       console.error("Error fetching GitHub user:", error);
       throw new Error(`Failed to fetch GitHub user: ${error.message}`);
+    }
+  },
+});
+
+/**
+ * Fetch repository info from a GitHub URL
+ */
+export const fetchRepoFromUrl = action({
+  args: {
+    accessToken: v.string(),
+    repoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Parse GitHub URL to extract owner and repo name
+      const urlMatch = args.repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!urlMatch) {
+        throw new Error("Invalid GitHub repository URL");
+      }
+
+      const [, owner, repoName] = urlMatch;
+      const cleanRepoName = repoName.replace(/\.git$/, "");
+
+      const octokit = new Octokit({ auth: args.accessToken });
+
+      const { data } = await octokit.rest.repos.get({
+        owner,
+        repo: cleanRepoName,
+      });
+
+      return {
+        id: data.id,
+        name: data.name,
+        fullName: data.full_name,
+        owner: data.owner.login,
+        description: data.description || "",
+        url: data.html_url,
+        isPrivate: data.private,
+        language: data.language,
+        stargazersCount: data.stargazers_count,
+        forksCount: data.forks_count,
+        openIssuesCount: data.open_issues_count,
+        topics: data.topics || [],
+        defaultBranch: data.default_branch,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error: any) {
+      console.error("Error fetching repository:", error);
+      if (error.status === 404) {
+        throw new Error("Repository not found. Make sure it exists and you have access.");
+      }
+      throw new Error(`Failed to fetch repository: ${error.message}`);
+    }
+  },
+});
+
+/**
+ * Validate that a PR/issue URL belongs to a specific repo
+ */
+export const validateContributionUrl = action({
+  args: {
+    accessToken: v.string(),
+    contributionUrl: v.string(),
+    repoOwner: v.string(),
+    repoName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      // Parse the contribution URL
+      const prMatch = args.contributionUrl.match(
+        /github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/
+      );
+      const issueMatch = args.contributionUrl.match(
+        /github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/
+      );
+
+      const match = prMatch || issueMatch;
+      const type = prMatch ? "pr" : issueMatch ? "issue" : null;
+
+      if (!match || !type) {
+        return {
+          valid: false,
+          error: "Invalid GitHub PR or issue URL",
+        };
+      }
+
+      const [, urlOwner, urlRepo, number] = match;
+
+      // Check if URL matches the project's repo
+      if (
+        urlOwner.toLowerCase() !== args.repoOwner.toLowerCase() ||
+        urlRepo.toLowerCase() !== args.repoName.toLowerCase()
+      ) {
+        return {
+          valid: false,
+          error: "The PR/issue does not belong to this project's repository",
+        };
+      }
+
+      const octokit = new Octokit({ auth: args.accessToken });
+
+      if (type === "pr") {
+        const { data: pr } = await octokit.rest.pulls.get({
+          owner: urlOwner,
+          repo: urlRepo,
+          pull_number: parseInt(number),
+        });
+
+        return {
+          valid: true,
+          type: "pr",
+          number: pr.number,
+          title: pr.title,
+          state: pr.state,
+          merged: pr.merged_at !== null,
+          url: pr.html_url,
+          author: pr.user?.login,
+        };
+      } else {
+        const { data: issue } = await octokit.rest.issues.get({
+          owner: urlOwner,
+          repo: urlRepo,
+          issue_number: parseInt(number),
+        });
+
+        // Check if it's actually a PR (GitHub API quirk)
+        if (issue.pull_request) {
+          return {
+            valid: true,
+            type: "pr",
+            number: issue.number,
+            title: issue.title,
+            state: issue.state,
+            merged: issue.state === "closed",
+            url: issue.html_url,
+            author: issue.user?.login,
+          };
+        }
+
+        return {
+          valid: true,
+          type: "issue",
+          number: issue.number,
+          title: issue.title,
+          state: issue.state,
+          url: issue.html_url,
+          author: issue.user?.login,
+        };
+      }
+    } catch (error: any) {
+      console.error("Error validating contribution URL:", error);
+      if (error.status === 404) {
+        return {
+          valid: false,
+          error: "PR or issue not found",
+        };
+      }
+      return {
+        valid: false,
+        error: `Failed to validate: ${error.message}`,
+      };
     }
   },
 });
