@@ -4,6 +4,25 @@ import { auth } from "./auth";
 import { Octokit } from "octokit";
 import type { Doc } from "./_generated/dataModel";
 
+// Tier thresholds
+const TIER_THRESHOLDS = {
+  builder: 0,
+  contributor: 100,
+  core: 500,
+  architect: 1000,
+};
+
+/**
+ * Calculate user tier based on points
+ */
+function calculateTier(
+  points: number
+): "builder" | "contributor" | "core" | "architect" {
+  if (points >= TIER_THRESHOLDS.architect) return "architect";
+  if (points >= TIER_THRESHOLDS.core) return "core";
+  if (points >= TIER_THRESHOLDS.contributor) return "contributor";
+  return "builder";
+}
 
 /**
  * Get or create user profile
@@ -44,9 +63,8 @@ export const getOrCreateUser = mutation({
       email: args.email,
       image: args.image,
       githubAccessToken: args.githubAccessToken,
-      totalEarnings: 0,
-      totalBountiesPosted: 0,
-      totalPRsSubmitted: 0,
+      totalPoints: 0,
+      tier: "builder",
       createdAt: Date.now(),
     });
 
@@ -102,6 +120,7 @@ export const updateUserProfile = mutation({
   args: {
     name: v.optional(v.string()),
     email: v.optional(v.string()),
+    discordId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
@@ -109,10 +128,12 @@ export const updateUserProfile = mutation({
       throw new Error("Not authenticated");
     }
 
-    await ctx.db.patch(userId, {
-      name: args.name,
-      email: args.email,
-    });
+    const updates: Record<string, unknown> = {};
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.email !== undefined) updates.email = args.email;
+    if (args.discordId !== undefined) updates.discordId = args.discordId;
+
+    await ctx.db.patch(userId, updates);
 
     return userId;
   },
@@ -129,50 +150,52 @@ export const getUserStats = query({
       return null;
     }
 
-    // Get issues posted by user
-    const issuesPosted = await ctx.db
-      .query("issues")
-      .withIndex("by_creator", (q) => q.eq("creatorId", args.userId))
+    // Get projects submitted by user
+    const projects = await ctx.db
+      .query("projects")
+      .withIndex("by_owner", (q) => q.eq("ownerId", args.userId))
       .collect();
 
-    // Get PRs submitted by user
-    const prsSubmitted = await ctx.db
-      .query("pullRequests")
-      .withIndex("by_submitter", (q) => q.eq("submitterId", args.userId))
+    // Get contributions made by user
+    const contributions = await ctx.db
+      .query("contributions")
+      .withIndex("by_contributor", (q) => q.eq("contributorId", args.userId))
       .collect();
 
-    // Get bounties won
-    const bountiesWon = await ctx.db
-      .query("bountyTransactions")
-      .withIndex("by_to_user", (q) => q.eq("toUserId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
-
-    // Get bounties paid
-    const bountiesPaid = await ctx.db
-      .query("bountyTransactions")
-      .withIndex("by_from_user", (q) => q.eq("fromUserId", args.userId))
-      .filter((q) => q.eq(q.field("status"), "completed"))
+    // Get redemptions by user
+    const redemptions = await ctx.db
+      .query("redemptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
     return {
-      user,
+      user: {
+        _id: user._id,
+        name: user.name,
+        githubUsername: user.githubUsername,
+        image: user.image,
+        totalPoints: user.totalPoints || 0,
+        tier: user.tier || "builder",
+        discordId: user.discordId,
+      },
       stats: {
-        issuesPosted: issuesPosted.length,
-        issuesResolved: issuesPosted.filter((i) => i.status === "resolved").length,
-        prsSubmitted: prsSubmitted.length,
-        prsApproved: prsSubmitted.filter((pr) => pr.status === "approved").length,
-        prsMerged: prsSubmitted.filter((pr) => pr.status === "merged").length,
-        totalEarnings: user.totalEarnings ?? 0,
-        bountiesWon: bountiesWon.length,
-        totalBountiesPaid: bountiesPaid.reduce((sum, b) => sum + b.amount, 0),
+        projectsSubmitted: projects.length,
+        activeProjects: projects.filter((p) => p.status === "active").length,
+        contributionsMade: contributions.length,
+        contributionsVerified: contributions.filter((c) => c.status === "verified").length,
+        contributionsPending: contributions.filter((c) => c.status === "pending").length,
+        pointsEarned: contributions
+          .filter((c) => c.status === "verified")
+          .reduce((sum, c) => sum + c.pointsAwarded, 0),
+        rewardsRedeemed: redemptions.length,
+        rewardsFulfilled: redemptions.filter((r) => r.status === "fulfilled").length,
       },
     };
   },
 });
 
 /**
- * Get leaderboard - top earners
+ * Get leaderboard - top contributors by points
  */
 export const getLeaderboard = query({
   args: {
@@ -181,23 +204,22 @@ export const getLeaderboard = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
 
-    const users = await ctx.db
-      .query("users")
-      .order("desc")
-      .collect();
+    const users = await ctx.db.query("users").collect();
 
-    // Sort by total earnings
+    // Sort by total points
     const sortedUsers = users
-      .sort((a, b) => (b.totalEarnings ?? 0) - (a.totalEarnings ?? 0))
+      .filter((u) => (u.totalPoints || 0) > 0)
+      .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0))
       .slice(0, limit);
 
-    return sortedUsers.map((user) => ({
+    return sortedUsers.map((user, index) => ({
+      rank: index + 1,
       _id: user._id,
       name: user.name,
       githubUsername: user.githubUsername,
       image: user.image,
-      totalEarnings: user.totalEarnings,
-      totalPRsSubmitted: user.totalPRsSubmitted,
+      totalPoints: user.totalPoints || 0,
+      tier: user.tier || "builder",
     }));
   },
 });
@@ -253,16 +275,12 @@ export const updateGitHubAccessToken = mutation({
       updates.email = profile.email;
     }
 
-    if (typeof existingUser.totalEarnings !== "number") {
-      updates.totalEarnings = 0;
+    if (typeof existingUser.totalPoints !== "number") {
+      updates.totalPoints = 0;
     }
 
-    if (typeof existingUser.totalBountiesPosted !== "number") {
-      updates.totalBountiesPosted = 0;
-    }
-
-    if (typeof existingUser.totalPRsSubmitted !== "number") {
-      updates.totalPRsSubmitted = 0;
+    if (!existingUser.tier) {
+      updates.tier = "builder";
     }
 
     if (!existingUser.createdAt) {
@@ -275,3 +293,12 @@ export const updateGitHubAccessToken = mutation({
   },
 });
 
+/**
+ * Get tier thresholds
+ */
+export const getTierThresholds = query({
+  args: {},
+  handler: async () => {
+    return TIER_THRESHOLDS;
+  },
+});

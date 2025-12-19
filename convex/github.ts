@@ -3,6 +3,74 @@ import { v } from "convex/values";
 import { Octokit } from "octokit";
 
 /**
+ * Parse GitHub repo URL to get owner and name
+ */
+function parseGitHubRepoUrl(url: string): { owner: string; name: string } | null {
+  try {
+    // Handle various GitHub URL formats
+    const patterns = [
+      /github\.com\/([^\/]+)\/([^\/\?#]+)/,
+      /github\.com:([^\/]+)\/([^\/\?#]+)/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return {
+          owner: match[1],
+          name: match[2].replace(/\.git$/, ""),
+        };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch repository info from URL
+ */
+export const fetchRepoFromUrl = action({
+  args: {
+    accessToken: v.string(),
+    repoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const parsed = parseGitHubRepoUrl(args.repoUrl);
+      if (!parsed) {
+        throw new Error("Invalid GitHub repository URL");
+      }
+
+      const octokit = new Octokit({ auth: args.accessToken });
+
+      const { data } = await octokit.rest.repos.get({
+        owner: parsed.owner,
+        repo: parsed.name,
+      });
+
+      return {
+        owner: data.owner.login,
+        name: data.name,
+        fullName: data.full_name,
+        description: data.description || "",
+        url: data.html_url,
+        isPrivate: data.private,
+        language: data.language,
+        stargazersCount: data.stargazers_count,
+        forksCount: data.forks_count,
+        openIssuesCount: data.open_issues_count,
+        topics: data.topics || [],
+      };
+    } catch (error: any) {
+      console.error("Error fetching repository:", error);
+      throw new Error(`Failed to fetch repository: ${error.message}`);
+    }
+  },
+});
+
+/**
  * Fetch user's GitHub repositories
  */
 export const fetchUserRepositories = action({
@@ -12,7 +80,7 @@ export const fetchUserRepositories = action({
   handler: async (ctx, args) => {
     try {
       const octokit = new Octokit({ auth: args.accessToken });
-      
+
       const { data } = await octokit.rest.repos.listForAuthenticatedUser({
         sort: "updated",
         per_page: 100,
@@ -29,6 +97,7 @@ export const fetchUserRepositories = action({
         language: repo.language,
         stargazersCount: repo.stargazers_count,
         openIssuesCount: repo.open_issues_count,
+        topics: repo.topics || [],
       }));
     } catch (error: any) {
       console.error("Error fetching repositories:", error);
@@ -38,211 +107,87 @@ export const fetchUserRepositories = action({
 });
 
 /**
- * Fetch issues from a specific repository
+ * Verify a GitHub URL belongs to a project's repository
  */
-export const fetchRepositoryIssues = action({
+export const verifyContributionUrl = action({
   args: {
     accessToken: v.string(),
-    owner: v.string(),
-    repo: v.string(),
-    state: v.optional(v.union(v.literal("open"), v.literal("closed"), v.literal("all"))),
+    contributionUrl: v.string(),
+    projectRepoOwner: v.string(),
+    projectRepoName: v.string(),
   },
   handler: async (ctx, args) => {
     try {
+      // Parse the contribution URL (PR or Issue)
+      const prMatch = args.contributionUrl.match(
+        /github\.com\/([^\/]+)\/([^\/]+)\/pull\/(\d+)/
+      );
+      const issueMatch = args.contributionUrl.match(
+        /github\.com\/([^\/]+)\/([^\/]+)\/issues\/(\d+)/
+      );
+
+      if (!prMatch && !issueMatch) {
+        return {
+          valid: false,
+          error: "URL is not a valid GitHub PR or issue link",
+        };
+      }
+
+      const match = prMatch || issueMatch;
+      const [, owner, repo, number] = match!;
+
+      // Check if URL belongs to the project repo
+      if (
+        owner.toLowerCase() !== args.projectRepoOwner.toLowerCase() ||
+        repo.toLowerCase() !== args.projectRepoName.toLowerCase()
+      ) {
+        return {
+          valid: false,
+          error: "This contribution is not for the specified project repository",
+        };
+      }
+
       const octokit = new Octokit({ auth: args.accessToken });
-      
-      const { data } = await octokit.rest.issues.listForRepo({
-        owner: args.owner,
-        repo: args.repo,
-        state: args.state || "open",
-        per_page: 100,
-      });
 
-      // Filter out pull requests (GitHub API returns PRs as issues)
-      const issues = data.filter((issue) => !issue.pull_request);
+      if (prMatch) {
+        // Verify PR exists and is merged
+        const { data: pr } = await octokit.rest.pulls.get({
+          owner,
+          repo,
+          pull_number: parseInt(number),
+        });
 
-      return issues.map((issue) => ({
-        id: issue.id,
-        number: issue.number,
-        title: issue.title,
-        body: issue.body || "",
-        state: issue.state,
-        url: issue.html_url,
-        labels: issue.labels.map((label) => 
-          typeof label === "string" ? label : label.name || ""
-        ),
-        createdAt: issue.created_at,
-        updatedAt: issue.updated_at,
-      }));
+        return {
+          valid: true,
+          type: "pr",
+          number: pr.number,
+          title: pr.title,
+          state: pr.state,
+          merged: pr.merged,
+          url: pr.html_url,
+        };
+      } else {
+        // Verify issue exists
+        const { data: issue } = await octokit.rest.issues.get({
+          owner,
+          repo,
+          issue_number: parseInt(number),
+        });
+
+        return {
+          valid: true,
+          type: "issue",
+          number: issue.number,
+          title: issue.title,
+          state: issue.state,
+          url: issue.html_url,
+        };
+      }
     } catch (error: any) {
-      console.error("Error fetching issues:", error);
-      throw new Error(`Failed to fetch issues: ${error.message}`);
-    }
-  },
-});
-
-/**
- * Fetch a specific issue from GitHub
- */
-export const fetchIssue = action({
-  args: {
-    accessToken: v.string(),
-    owner: v.string(),
-    repo: v.string(),
-    issueNumber: v.number(),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const octokit = new Octokit({ auth: args.accessToken });
-      
-      const { data } = await octokit.rest.issues.get({
-        owner: args.owner,
-        repo: args.repo,
-        issue_number: args.issueNumber,
-      });
-
+      console.error("Error verifying contribution URL:", error);
       return {
-        id: data.id,
-        number: data.number,
-        title: data.title,
-        body: data.body || "",
-        state: data.state,
-        url: data.html_url,
-        labels: data.labels.map((label) => 
-          typeof label === "string" ? label : label.name || ""
-        ),
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      };
-    } catch (error: any) {
-      console.error("Error fetching issue:", error);
-      throw new Error(`Failed to fetch issue: ${error.message}`);
-    }
-  },
-});
-
-/**
- * Fetch pull requests for a repository
- */
-export const fetchRepositoryPullRequests = action({
-  args: {
-    accessToken: v.string(),
-    owner: v.string(),
-    repo: v.string(),
-    state: v.optional(v.union(v.literal("open"), v.literal("closed"), v.literal("all"))),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const octokit = new Octokit({ auth: args.accessToken });
-      
-      const { data } = await octokit.rest.pulls.list({
-        owner: args.owner,
-        repo: args.repo,
-        state: args.state || "open",
-        per_page: 100,
-      });
-
-      return data.map((pr) => ({
-        id: pr.id,
-        number: pr.number,
-        title: pr.title,
-        body: pr.body || "",
-        state: pr.state,
-        url: pr.html_url,
-        merged: pr.merged_at !== null,
-        createdAt: pr.created_at,
-        updatedAt: pr.updated_at,
-        mergedAt: pr.merged_at,
-      }));
-    } catch (error: any) {
-      console.error("Error fetching pull requests:", error);
-      throw new Error(`Failed to fetch pull requests: ${error.message}`);
-    }
-  },
-});
-
-/**
- * Fetch a specific pull request from GitHub
- */
-export const fetchPullRequest = action({
-  args: {
-    accessToken: v.string(),
-    owner: v.string(),
-    repo: v.string(),
-    prNumber: v.number(),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const octokit = new Octokit({ auth: args.accessToken });
-      
-      const { data } = await octokit.rest.pulls.get({
-        owner: args.owner,
-        repo: args.repo,
-        pull_number: args.prNumber,
-      });
-
-      return {
-        id: data.id,
-        number: data.number,
-        title: data.title,
-        body: data.body || "",
-        state: data.state,
-        url: data.html_url,
-        merged: data.merged_at !== null,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-        mergedAt: data.merged_at,
-      };
-    } catch (error: any) {
-      console.error("Error fetching pull request:", error);
-      throw new Error(`Failed to fetch pull request: ${error.message}`);
-    }
-  },
-});
-
-/**
- * Verify that a PR exists and is linked to an issue
- */
-export const verifyPullRequest = action({
-  args: {
-    accessToken: v.string(),
-    owner: v.string(),
-    repo: v.string(),
-    prNumber: v.number(),
-    issueNumber: v.number(),
-  },
-  handler: async (ctx, args) => {
-    try {
-      const octokit = new Octokit({ auth: args.accessToken });
-      
-      // Fetch the PR
-      const { data: pr } = await octokit.rest.pulls.get({
-        owner: args.owner,
-        repo: args.repo,
-        pull_number: args.prNumber,
-      });
-
-      // Check if PR body or title mentions the issue
-      const issueRef = `#${args.issueNumber}`;
-      const mentionsIssue = 
-        pr.body?.includes(issueRef) || 
-        pr.title.includes(issueRef);
-
-      return {
-        exists: true,
-        prId: pr.id,
-        prNumber: pr.number,
-        title: pr.title,
-        state: pr.state,
-        merged: pr.merged_at !== null,
-        mentionsIssue,
-        url: pr.html_url,
-      };
-    } catch (error: any) {
-      console.error("Error verifying pull request:", error);
-      return {
-        exists: false,
-        error: error.message,
+        valid: false,
+        error: `Failed to verify URL: ${error.message}`,
       };
     }
   },
@@ -258,7 +203,7 @@ export const fetchGitHubUser = action({
   handler: async (ctx, args) => {
     try {
       const octokit = new Octokit({ auth: args.accessToken });
-      
+
       const { data } = await octokit.rest.users.getAuthenticated();
 
       return {
@@ -276,4 +221,3 @@ export const fetchGitHubUser = action({
     }
   },
 });
-

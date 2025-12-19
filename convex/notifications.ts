@@ -23,7 +23,7 @@ export const getMyNotifications = query({
     if (args.unreadOnly) {
       notificationsQuery = ctx.db
         .query("notifications")
-        .withIndex("by_user_unread", (q) => 
+        .withIndex("by_user_unread", (q) =>
           q.eq("userId", userId).eq("isRead", false)
         );
     }
@@ -49,7 +49,7 @@ export const getUnreadCount = query({
 
     const unread = await ctx.db
       .query("notifications")
-      .withIndex("by_user_unread", (q) => 
+      .withIndex("by_user_unread", (q) =>
         q.eq("userId", userId).eq("isRead", false)
       )
       .collect();
@@ -99,7 +99,7 @@ export const markAllAsRead = mutation({
 
     const unread = await ctx.db
       .query("notifications")
-      .withIndex("by_user_unread", (q) => 
+      .withIndex("by_user_unread", (q) =>
         q.eq("userId", userId).eq("isRead", false)
       )
       .collect();
@@ -139,4 +139,3 @@ export const deleteNotification = mutation({
     return { success: true };
   },
 });
-
