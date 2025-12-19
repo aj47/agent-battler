@@ -1,354 +1,243 @@
 "use client";
 
 import Link from "next/link";
-import { Code2, Trophy, GitPullRequest, DollarSign, ArrowRight, TrendingUp, Medal, Award } from "lucide-react";
+import { Users, GitPullRequest, Gift, ArrowRight, Trophy, Zap, Heart, Code2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
-import { IssueCard } from "@/components/IssueCard";
+import { ProjectCard } from "@/components/ProjectCard";
+import { LeaderboardTable } from "@/components/LeaderboardTable";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 export default function Home() {
-  const topUsers = useQuery(api.users.getLeaderboard, { limit: 4 });
-  const agentStats = useQuery(api.codingAgents.getCodingAgentStats);
-  const topIssues = useQuery(api.issues.getTopIssues, { limit: 3 });
+  const topUsers = useQuery(api.contributions.getLeaderboard, { limit: 5 });
+  const featuredProjects = useQuery(api.projects.getFeaturedProjects, { limit: 6 });
+  const stats = useQuery(api.contributions.getContributionStats);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-[#0A0A0A]">
       <Navbar />
 
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Battle of the <span className="text-blue-600">AI Coding Agents</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Post GitHub issues with bounties. Contributors solve them using their favorite AI coding agents.
-            Track which agents win the most bounties!
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/issues"
-              className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
-              Browse Issues
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <Link
-              href="/issues/create"
-              className="inline-flex items-center justify-center px-8 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-            >
-              Post an Issue
-            </Link>
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#00FF41]/5 to-transparent"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+          <div className="text-center">
+            <div className="inline-flex items-center space-x-2 bg-[#00FF41]/10 px-4 py-2 rounded-full mb-6 border border-[#00FF41]/20">
+              <Heart className="h-4 w-4 text-[#00FF41]" />
+              <span className="text-[#00FF41] text-sm font-medium">Builders helping builders</span>
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+              Build Together,{" "}
+              <span className="text-[#00FF41]">Grow Together</span>
+            </h1>
+            <p className="text-xl text-gray-400 mb-8 max-w-3xl mx-auto">
+              Submit your GitHub projects, contribute to others, and earn points.
+              Turn your contributions into real rewards like Discord roles, shoutouts, and stream features.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/projects"
+                className="inline-flex items-center justify-center px-8 py-3 text-base font-medium rounded-lg text-black bg-[#00FF41] hover:bg-[#00CC33] transition-colors"
+              >
+                Explore Projects
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+              <Link
+                href="/projects/submit"
+                className="inline-flex items-center justify-center px-8 py-3 border border-[#222222] text-base font-medium rounded-lg text-white bg-[#111111] hover:bg-[#1a1a1a] transition-colors"
+              >
+                Submit Your Project
+              </Link>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center">
+              <div className="text-3xl font-bold text-[#00FF41] mb-1">
+                {stats?.totalContributions ?? 0}
+              </div>
+              <div className="text-sm text-gray-400">Contributions</div>
+            </div>
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center">
+              <div className="text-3xl font-bold text-[#00FF41] mb-1">
+                {stats?.totalPointsAwarded?.toLocaleString() ?? 0}
+              </div>
+              <div className="text-sm text-gray-400">Points Awarded</div>
+            </div>
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center">
+              <div className="text-3xl font-bold text-[#00FF41] mb-1">
+                {featuredProjects?.length ?? 0}
+              </div>
+              <div className="text-sm text-gray-400">Active Projects</div>
+            </div>
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center">
+              <div className="text-3xl font-bold text-[#00FF41] mb-1">
+                {topUsers?.length ?? 0}
+              </div>
+              <div className="text-sm text-gray-400">Contributors</div>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Leaderboard Snippets */}
-        <div className="mt-16 grid lg:grid-cols-2 gap-8">
-          {/* Top Contributors */}
-          <div className="h-[500px]">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden h-full flex flex-col">
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-center space-x-2">
-                  <Trophy className="h-6 w-6 text-yellow-600" />
-                  <h2 className="text-xl font-bold text-gray-900">Top Contributors</h2>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Two Column Layout */}
+        <div className="grid lg:grid-cols-3 gap-8 mb-16">
+          {/* Featured Projects */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Projects Seeking Help</h2>
+              <Link
+                href="/projects"
+                className="text-[#00FF41] hover:underline text-sm font-medium flex items-center"
+              >
+                View all
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            {!featuredProjects ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00FF41] mx-auto"></div>
+                <p className="mt-4 text-gray-400">Loading projects...</p>
+              </div>
+            ) : featuredProjects.length > 0 ? (
+              <div className="grid gap-4">
+                {featuredProjects.slice(0, 4).map((project) => (
+                  <ProjectCard key={project._id} project={project} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-[#111111] rounded-xl border border-[#222222]">
+                <Code2 className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-400">No projects available yet.</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Be the first to submit your project!
+                </p>
+                <Link
+                  href="/projects/submit"
+                  className="inline-flex items-center justify-center px-6 py-2 mt-4 text-sm font-medium rounded-lg text-black bg-[#00FF41] hover:bg-[#00CC33] transition-colors"
+                >
+                  Submit a Project
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-[#111111] border border-[#222222] rounded-xl overflow-hidden sticky top-20">
+              <div className="bg-gradient-to-r from-[#00FF41]/10 to-transparent px-6 py-4 border-b border-[#222222]">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="h-5 w-5 text-[#00FF41]" />
+                  <h2 className="text-lg font-bold text-white">Top Contributors</h2>
                 </div>
               </div>
 
               {!topUsers ? (
-                <div className="text-center py-8 flex-1">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                </div>
-              ) : topUsers.length === 0 ? (
-                <div className="p-8 text-center flex-1">
-                  <p className="text-gray-600">No contributors yet. Be the first to earn bounties!</p>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF41] mx-auto"></div>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200 flex-1 overflow-auto">
-                  {topUsers.map((user, index) => (
-                    <div
-                      key={user._id}
-                      className={`p-4 flex items-center space-x-3 min-h-[88px] ${
-                        index === 0 ? "bg-gradient-to-r from-yellow-50 to-white" : ""
-                      }`}
-                    >
-                      {/* Rank */}
-                      <div className="flex-shrink-0 w-8 text-center">
-                        {index === 0 && (
-                          <Trophy className="h-5 w-5 text-yellow-500 mx-auto" />
-                        )}
-                        {index === 1 && (
-                          <Medal className="h-5 w-5 text-gray-400 mx-auto" />
-                        )}
-                        {index === 2 && (
-                          <Award className="h-5 w-5 text-orange-600 mx-auto" />
-                        )}
-                        {index > 2 && (
-                          <span className="text-sm font-bold text-gray-400">
-                            #{index + 1}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Profile Image */}
-                      {user.image ? (
-                        <img
-                          src={user.image}
-                          alt={user.name || "User"}
-                          className="h-10 w-10 rounded-full flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-                          {(user.name || user.githubUsername || "?")[0].toUpperCase()}
-                        </div>
-                      )}
-
-                      {/* User Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {user.name || user.githubUsername}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          @{user.githubUsername ?? 'unknown'}
-                        </p>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-lg font-bold text-yellow-600">
-                          {user.totalEarnings ?? 0}
-                        </p>
-                        <p className="text-xs text-gray-600">points</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <LeaderboardTable users={topUsers} compact />
               )}
 
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 mt-auto">
+              <div className="px-4 py-4 border-t border-[#222222]">
                 <Link
                   href="/leaderboard"
-                  className="block w-full text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                  className="block w-full text-center px-4 py-2 bg-[#00FF41] hover:bg-[#00CC33] text-black font-medium rounded-lg transition-colors"
                 >
-                  View the Full Leaderboard
+                  View Full Leaderboard
                 </Link>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Top AI Agents */}
-          <div className="h-[500px]">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden h-full flex flex-col">
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-center space-x-2">
-                  <TrendingUp className="h-6 w-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-900">Top AI Agents</h2>
-                </div>
+        {/* How It Works */}
+        <div className="mb-16">
+          <h2 className="text-3xl font-bold text-center text-white mb-12">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="bg-[#00FF41] text-black w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                1
               </div>
-
-              {!agentStats ? (
-                <div className="text-center py-8 flex-1">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                </div>
-              ) : agentStats.length === 0 ? (
-                <div className="p-8 text-center flex-1">
-                  <p className="text-gray-600">No agent data yet. Start submitting PRs!</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-200 flex-1 overflow-auto">
-                  {agentStats.slice(0, 3).map((agentStat, index) => (
-                    <div key={agentStat.agent._id} className="p-4 flex flex-col justify-center min-h-[88px]">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-bold text-gray-400">
-                              #{index + 1}
-                            </span>
-                            <h3 className="text-sm font-semibold text-gray-900">
-                              {agentStat.agent.name}
-                            </h3>
-                          </div>
-                        </div>
-                        <div className="ml-4 text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-green-600">
-                            {agentStat.stats.successRate}%
-                          </p>
-                          <p className="text-xs text-gray-600">success</p>
-                        </div>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-4 gap-2">
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-gray-900">
-                            {agentStat.stats.totalPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">PRs</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-green-600">
-                            {agentStat.stats.mergedPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">Merged</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-red-600">
-                            {agentStat.stats.rejectedPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">Rejected</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-bold text-yellow-600">
-                            {agentStat.stats.totalBountiesWon}
-                          </p>
-                          <p className="text-xs text-gray-600">Points</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 mt-auto">
-                <Link
-                  href="/leaderboard"
-                  className="block w-full text-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                >
-                  View the Full Leaderboard
-                </Link>
+              <h4 className="font-semibold text-white mb-2">Submit Your Project</h4>
+              <p className="text-sm text-gray-400">
+                Share your GitHub repo and what help you need
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="bg-[#00FF41] text-black w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                2
               </div>
+              <h4 className="font-semibold text-white mb-2">Contribute to Others</h4>
+              <p className="text-sm text-gray-400">
+                Submit PRs, feedback, or issues to community projects
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="bg-[#00FF41] text-black w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                3
+              </div>
+              <h4 className="font-semibold text-white mb-2">Earn Points</h4>
+              <p className="text-sm text-gray-400">
+                Get points when project owners verify your contributions
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="bg-[#00FF41] text-black w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                4
+              </div>
+              <h4 className="font-semibold text-white mb-2">Redeem Rewards</h4>
+              <p className="text-sm text-gray-400">
+                Turn points into Discord roles, shoutouts, and more
+              </p>
             </div>
           </div>
         </div>
 
         {/* Features */}
-        <div className="mt-24 grid md:grid-cols-3 gap-8">
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-            <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <DollarSign className="h-6 w-6 text-blue-600" />
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="bg-[#111111] p-8 rounded-xl border border-[#222222]">
+            <div className="bg-[#00FF41]/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+              <GitPullRequest className="h-6 w-6 text-[#00FF41]" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Post Issues with Bounties
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Contribute & Earn
             </h3>
-            <p className="text-gray-600">
-              Select issues from your GitHub repositories and attach bounty points to incentivize solutions.
+            <p className="text-gray-400">
+              Submit PRs (50 pts), resolved issues (30 pts), or feedback (20 pts) to earn points.
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-            <div className="bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <GitPullRequest className="h-6 w-6 text-green-600" />
+          <div className="bg-[#111111] p-8 rounded-xl border border-[#222222]">
+            <div className="bg-[#00FF41]/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+              <Users className="h-6 w-6 text-[#00FF41]" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Submit PRs with AI Agents
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Level Up Tiers
             </h3>
-            <p className="text-gray-600">
-              Solve issues using Augment, Cursor, Copilot, or any AI coding tool and submit your PR.
+            <p className="text-gray-400">
+              Progress from Builder to Contributor, Core, and Architect as you earn more points.
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-            <div className="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-              <Trophy className="h-6 w-6 text-purple-600" />
+          <div className="bg-[#111111] p-8 rounded-xl border border-[#222222]">
+            <div className="bg-[#00FF41]/10 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+              <Gift className="h-6 w-6 text-[#00FF41]" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Track Agent Performance
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Real Rewards
             </h3>
-            <p className="text-gray-600">
-              See which AI coding agents win the most bounties and have the highest success rates.
+            <p className="text-gray-400">
+              Redeem points for Discord roles, social shoutouts, and dedicated stream features.
             </p>
           </div>
-        </div>
-
-        {/* How it Works */}
-        <div className="mt-24">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            How It Works
-          </h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                1
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Sign in with GitHub</h4>
-              <p className="text-sm text-gray-600">
-                Authenticate using your GitHub account
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                2
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Post or Browse Issues</h4>
-              <p className="text-sm text-gray-600">
-                Post issues with bounties or find issues to solve
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                3
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Submit Solutions</h4>
-              <p className="text-sm text-gray-600">
-                Create PRs using your favorite AI coding agent
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="bg-blue-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                4
-              </div>
-              <h4 className="font-semibold text-gray-900 mb-2">Earn Bounties</h4>
-              <p className="text-sm text-gray-600">
-                Get approved and earn bounty points
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Issues Section */}
-        <div className="mt-24">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Featured Issues
-              </h2>
-              <p className="text-gray-600">
-                Top bounty issues waiting to be solved
-              </p>
-            </div>
-            <Link
-              href="/issues"
-              className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
-            >
-              View all issues
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </div>
-
-          {!topIssues ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading featured issues...</p>
-            </div>
-          ) : topIssues.length > 0 ? (
-            <div className="grid gap-6">
-              {topIssues.map((issue) => (
-                <IssueCard key={issue._id} issue={issue} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-              <p className="text-gray-600">No issues available yet.</p>
-              <p className="text-sm text-gray-500 mt-2">
-                Be the first to post an issue with a bounty!
-              </p>
-              <Link
-                href="/issues/create"
-                className="inline-flex items-center justify-center px-6 py-2 mt-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-              >
-                Post an Issue
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </div>
