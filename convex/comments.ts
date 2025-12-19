@@ -3,11 +3,11 @@ import { mutation, query } from "./_generated/server";
 import { auth } from "./auth";
 
 /**
- * Create a new comment on an issue (top-level comment)
+ * Create a new comment on a project (top-level comment)
  */
 export const createComment = mutation({
   args: {
-    issueId: v.id("issues"),
+    projectId: v.id("projects"),
     content: v.string(),
   },
   handler: async (ctx, args) => {
@@ -16,10 +16,10 @@ export const createComment = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Verify issue exists
-    const issue = await ctx.db.get(args.issueId);
-    if (!issue) {
-      throw new Error("Issue not found");
+    // Verify project exists
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
     }
 
     // Validate content
@@ -29,7 +29,7 @@ export const createComment = mutation({
 
     // Create the comment
     const commentId = await ctx.db.insert("comments", {
-      issueId: args.issueId,
+      projectId: args.projectId,
       userId,
       content: args.content.trim(),
       parentCommentId: undefined,
@@ -39,15 +39,15 @@ export const createComment = mutation({
       updatedAt: Date.now(),
     });
 
-    // Create notification for issue creator (if not commenting on own issue)
-    if (issue.creatorId !== userId) {
+    // Create notification for project owner (if not commenting on own project)
+    if (project.ownerId !== userId) {
       const user = await ctx.db.get(userId);
       await ctx.db.insert("notifications", {
-        userId: issue.creatorId,
+        userId: project.ownerId,
         type: "comment",
-        title: "New comment on your issue",
-        message: `${user?.name || "Someone"} commented on "${issue.title}"`,
-        relatedIssueId: args.issueId,
+        title: "New comment on your project",
+        message: `${user?.name || "Someone"} commented on "${project.title}"`,
+        relatedProjectId: args.projectId,
         isRead: false,
         createdAt: Date.now(),
       });
@@ -62,7 +62,7 @@ export const createComment = mutation({
  */
 export const createReply = mutation({
   args: {
-    issueId: v.id("issues"),
+    projectId: v.id("projects"),
     parentCommentId: v.id("comments"),
     content: v.string(),
   },
@@ -72,19 +72,19 @@ export const createReply = mutation({
       throw new Error("Not authenticated");
     }
 
-    // Verify issue exists
-    const issue = await ctx.db.get(args.issueId);
-    if (!issue) {
-      throw new Error("Issue not found");
+    // Verify project exists
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error("Project not found");
     }
 
-    // Verify parent comment exists and belongs to this issue
+    // Verify parent comment exists and belongs to this project
     const parentComment = await ctx.db.get(args.parentCommentId);
     if (!parentComment) {
       throw new Error("Parent comment not found");
     }
-    if (parentComment.issueId !== args.issueId) {
-      throw new Error("Parent comment does not belong to this issue");
+    if (parentComment.projectId !== args.projectId) {
+      throw new Error("Parent comment does not belong to this project");
     }
 
     // Validate content
@@ -94,7 +94,7 @@ export const createReply = mutation({
 
     // Create the reply
     const replyId = await ctx.db.insert("comments", {
-      issueId: args.issueId,
+      projectId: args.projectId,
       userId,
       content: args.content.trim(),
       parentCommentId: args.parentCommentId,
@@ -112,13 +112,12 @@ export const createReply = mutation({
     // Create notification for parent comment author (if not replying to own comment)
     if (parentComment.userId !== userId) {
       const user = await ctx.db.get(userId);
-      const parentUser = await ctx.db.get(parentComment.userId);
       await ctx.db.insert("notifications", {
         userId: parentComment.userId,
         type: "comment",
         title: "New reply to your comment",
-        message: `${user?.name || "Someone"} replied to your comment on "${issue.title}"`,
-        relatedIssueId: args.issueId,
+        message: `${user?.name || "Someone"} replied to your comment on "${project.title}"`,
+        relatedProjectId: args.projectId,
         isRead: false,
         createdAt: Date.now(),
       });
@@ -129,16 +128,16 @@ export const createReply = mutation({
 });
 
 /**
- * Get all top-level comments for an issue (with user info)
+ * Get all top-level comments for a project (with user info)
  */
-export const getCommentsByIssue = query({
-  args: { issueId: v.id("issues") },
+export const getCommentsByProject = query({
+  args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
     // Get all top-level comments (no parent)
     const comments = await ctx.db
       .query("comments")
-      .withIndex("by_issue_and_parent", (q) => 
-        q.eq("issueId", args.issueId).eq("parentCommentId", undefined)
+      .withIndex("by_project_and_parent", (q) =>
+        q.eq("projectId", args.projectId).eq("parentCommentId", undefined)
       )
       .order("desc")
       .collect();
@@ -149,12 +148,14 @@ export const getCommentsByIssue = query({
         const user = await ctx.db.get(comment.userId);
         return {
           ...comment,
-          user: user ? {
-            _id: user._id,
-            name: user.name,
-            githubUsername: user.githubUsername,
-            image: user.image,
-          } : null,
+          user: user
+            ? {
+                _id: user._id,
+                name: user.name,
+                githubUsername: user.githubUsername,
+                image: user.image,
+              }
+            : null,
         };
       })
     );
@@ -182,12 +183,14 @@ export const getRepliesByComment = query({
         const user = await ctx.db.get(reply.userId);
         return {
           ...reply,
-          user: user ? {
-            _id: user._id,
-            name: user.name,
-            githubUsername: user.githubUsername,
-            image: user.image,
-          } : null,
+          user: user
+            ? {
+                _id: user._id,
+                name: user.name,
+                githubUsername: user.githubUsername,
+                image: user.image,
+              }
+            : null,
         };
       })
     );
@@ -197,14 +200,14 @@ export const getRepliesByComment = query({
 });
 
 /**
- * Get comment count for an issue
+ * Get comment count for a project
  */
 export const getCommentCount = query({
-  args: { issueId: v.id("issues") },
+  args: { projectId: v.id("projects") },
   handler: async (ctx, args) => {
     const comments = await ctx.db
       .query("comments")
-      .withIndex("by_issue", (q) => q.eq("issueId", args.issueId))
+      .withIndex("by_project", (q) => q.eq("projectId", args.projectId))
       .collect();
 
     return comments.length;
@@ -266,14 +269,16 @@ export const deleteComment = mutation({
       throw new Error("Comment not found");
     }
 
-    // Only the comment author or issue creator can delete
-    const issue = await ctx.db.get(comment.issueId);
-    if (!issue) {
-      throw new Error("Issue not found");
+    // Only the comment author or project owner can delete
+    const project = await ctx.db.get(comment.projectId);
+    if (!project) {
+      throw new Error("Project not found");
     }
 
-    if (comment.userId !== userId && issue.creatorId !== userId) {
-      throw new Error("You can only delete your own comments or comments on your issues");
+    if (comment.userId !== userId && project.ownerId !== userId) {
+      throw new Error(
+        "You can only delete your own comments or comments on your projects"
+      );
     }
 
     // If this is a parent comment with replies, we need to handle them
@@ -306,4 +311,3 @@ export const deleteComment = mutation({
     return { success: true };
   },
 });
-

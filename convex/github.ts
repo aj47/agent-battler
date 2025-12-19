@@ -258,7 +258,7 @@ export const fetchGitHubUser = action({
   handler: async (ctx, args) => {
     try {
       const octokit = new Octokit({ auth: args.accessToken });
-      
+
       const { data } = await octokit.rest.users.getAuthenticated();
 
       return {
@@ -273,6 +273,206 @@ export const fetchGitHubUser = action({
     } catch (error: any) {
       console.error("Error fetching GitHub user:", error);
       throw new Error(`Failed to fetch GitHub user: ${error.message}`);
+    }
+  },
+});
+
+/**
+ * Parse a GitHub repo URL to extract owner and repo name
+ */
+export function parseGitHubRepoUrl(url: string): { owner: string; repo: string } | null {
+  try {
+    // Support various GitHub URL formats:
+    // https://github.com/owner/repo
+    // https://github.com/owner/repo.git
+    // git@github.com:owner/repo.git
+    // github.com/owner/repo
+
+    let cleanUrl = url.trim();
+
+    // Handle SSH URLs
+    if (cleanUrl.startsWith("git@github.com:")) {
+      cleanUrl = cleanUrl.replace("git@github.com:", "https://github.com/");
+    }
+
+    // Add https if missing
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = "https://" + cleanUrl;
+    }
+
+    const parsed = new URL(cleanUrl);
+
+    if (!parsed.hostname.includes("github.com")) {
+      return null;
+    }
+
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+
+    if (pathParts.length < 2) {
+      return null;
+    }
+
+    const owner = pathParts[0];
+    let repo = pathParts[1];
+
+    // Remove .git suffix if present
+    if (repo.endsWith(".git")) {
+      repo = repo.slice(0, -4);
+    }
+
+    return { owner, repo };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch repository info from a GitHub URL
+ */
+export const fetchRepoFromUrl = action({
+  args: {
+    accessToken: v.string(),
+    repoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const parsed = parseGitHubRepoUrl(args.repoUrl);
+
+    if (!parsed) {
+      throw new Error("Invalid GitHub repository URL");
+    }
+
+    try {
+      const octokit = new Octokit({ auth: args.accessToken });
+
+      const { data } = await octokit.rest.repos.get({
+        owner: parsed.owner,
+        repo: parsed.repo,
+      });
+
+      return {
+        id: data.id,
+        name: data.name,
+        fullName: data.full_name,
+        owner: data.owner.login,
+        description: data.description || "",
+        url: data.html_url,
+        isPrivate: data.private,
+        language: data.language,
+        stargazersCount: data.stargazers_count,
+        forksCount: data.forks_count,
+        openIssuesCount: data.open_issues_count,
+        topics: data.topics || [],
+        defaultBranch: data.default_branch,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      };
+    } catch (error: any) {
+      if (error.status === 404) {
+        throw new Error("Repository not found. Make sure the URL is correct and you have access to it.");
+      }
+      console.error("Error fetching repository:", error);
+      throw new Error(`Failed to fetch repository: ${error.message}`);
+    }
+  },
+});
+
+/**
+ * Validate that a PR/issue URL belongs to a specific repository
+ */
+export const validateContributionUrl = action({
+  args: {
+    accessToken: v.string(),
+    contributionUrl: v.string(),
+    expectedOwner: v.string(),
+    expectedRepo: v.string(),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const url = new URL(args.contributionUrl);
+
+      if (!url.hostname.includes("github.com")) {
+        return { valid: false, error: "URL is not a GitHub URL" };
+      }
+
+      const pathParts = url.pathname.split("/").filter(Boolean);
+
+      if (pathParts.length < 4) {
+        return { valid: false, error: "Invalid GitHub PR/issue URL format" };
+      }
+
+      const [owner, repo, type, numberStr] = pathParts;
+      const number = parseInt(numberStr, 10);
+
+      if (owner.toLowerCase() !== args.expectedOwner.toLowerCase() ||
+          repo.toLowerCase() !== args.expectedRepo.toLowerCase()) {
+        return {
+          valid: false,
+          error: "This contribution is not for the specified project"
+        };
+      }
+
+      if (type !== "pull" && type !== "issues") {
+        return { valid: false, error: "URL must be a pull request or issue" };
+      }
+
+      if (isNaN(number)) {
+        return { valid: false, error: "Invalid PR/issue number" };
+      }
+
+      // Verify the PR/issue exists
+      const octokit = new Octokit({ auth: args.accessToken });
+
+      if (type === "pull") {
+        const { data } = await octokit.rest.pulls.get({
+          owner,
+          repo,
+          pull_number: number,
+        });
+
+        return {
+          valid: true,
+          type: "pr",
+          number,
+          title: data.title,
+          state: data.state,
+          merged: data.merged_at !== null,
+          url: data.html_url,
+        };
+      } else {
+        const { data } = await octokit.rest.issues.get({
+          owner,
+          repo,
+          issue_number: number,
+        });
+
+        // Check if it's actually a PR disguised as an issue
+        if (data.pull_request) {
+          return {
+            valid: true,
+            type: "pr",
+            number,
+            title: data.title,
+            state: data.state,
+            merged: data.pull_request.merged_at !== null,
+            url: data.html_url,
+          };
+        }
+
+        return {
+          valid: true,
+          type: "issue",
+          number,
+          title: data.title,
+          state: data.state,
+          url: data.html_url,
+        };
+      }
+    } catch (error: any) {
+      if (error.status === 404) {
+        return { valid: false, error: "PR/issue not found" };
+      }
+      console.error("Error validating contribution URL:", error);
+      return { valid: false, error: `Validation failed: ${error.message}` };
     }
   },
 });

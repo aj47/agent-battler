@@ -1,216 +1,291 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Navbar } from "@/components/Navbar";
-import { Trophy, Medal, Award, TrendingUp } from "lucide-react";
+import { TierBadge } from "@/components/PointsBadge";
+import { Trophy, Medal, Award, Zap, Star, Crown, Gem, Calendar } from "lucide-react";
 
 export default function LeaderboardPage() {
-  const topUsers = useQuery(api.users.getLeaderboard, { limit: 20 });
-  const agentStats = useQuery(api.codingAgents.getCodingAgentStats);
+  const [period, setPeriod] = useState<"week" | "month" | "all">("all");
+  const leaderboard = useQuery(api.contributions.getLeaderboard, { limit: 20, period });
+
+  const tierIcons = {
+    builder: Zap,
+    contributor: Star,
+    core: Crown,
+    architect: Gem,
+  };
+
+  const tierColors = {
+    builder: "text-gray-400",
+    contributor: "text-blue-400",
+    core: "text-purple-400",
+    architect: "text-[#00FF41]",
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0A0A0A]">
       <Navbar />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Leaderboard</h1>
-          <p className="text-gray-600">
-            Top contributors and AI coding agent performance
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Leaderboard</h1>
+            <p className="text-gray-400">
+              Top contributors in the community
+            </p>
+          </div>
+
+          {/* Period Filter */}
+          <div className="flex items-center gap-2 bg-[#111111] border border-[#222222] rounded-lg p-1">
+            <button
+              onClick={() => setPeriod("week")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                period === "week"
+                  ? "bg-[#00FF41] text-black"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              This Week
+            </button>
+            <button
+              onClick={() => setPeriod("month")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                period === "month"
+                  ? "bg-[#00FF41] text-black"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              This Month
+            </button>
+            <button
+              onClick={() => setPeriod("all")}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                period === "all"
+                  ? "bg-[#00FF41] text-black"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              All Time
+            </button>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Top Contributors */}
-          <div>
-            <div className="flex items-center space-x-2 mb-6">
-              <Trophy className="h-6 w-6 text-yellow-600" />
-              <h2 className="text-2xl font-bold text-gray-900">Top Contributors</h2>
+        {/* Top 3 Highlight */}
+        {leaderboard && leaderboard.length >= 3 && (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {/* Second Place */}
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center order-1">
+              <Medal className="h-8 w-8 text-gray-400 mx-auto mb-3" />
+              <div className="relative inline-block mb-3">
+                {(leaderboard[1].image || leaderboard[1].avatar_url) ? (
+                  <img
+                    src={leaderboard[1].image || leaderboard[1].avatar_url}
+                    alt={leaderboard[1].name || "User"}
+                    className="h-16 w-16 rounded-full mx-auto"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold text-xl mx-auto">
+                    {(leaderboard[1].name || leaderboard[1].githubUsername || "?")[0].toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <p className="font-semibold text-white truncate">
+                {leaderboard[1].name || leaderboard[1].githubUsername}
+              </p>
+              <p className="text-2xl font-bold text-gray-400 mt-1">
+                {leaderboard[1].totalPoints.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500">points</p>
             </div>
 
-            {!topUsers ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            {/* First Place */}
+            <div className="bg-gradient-to-b from-[#00FF41]/20 to-[#111111] border border-[#00FF41]/30 rounded-xl p-6 text-center order-0 md:order-1 transform md:-translate-y-4">
+              <Trophy className="h-10 w-10 text-[#00FF41] mx-auto mb-3" />
+              <div className="relative inline-block mb-3">
+                {(leaderboard[0].image || leaderboard[0].avatar_url) ? (
+                  <img
+                    src={leaderboard[0].image || leaderboard[0].avatar_url}
+                    alt={leaderboard[0].name || "User"}
+                    className="h-20 w-20 rounded-full mx-auto border-2 border-[#00FF41]"
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-[#00FF41] font-bold text-2xl mx-auto border-2 border-[#00FF41]">
+                    {(leaderboard[0].name || leaderboard[0].githubUsername || "?")[0].toUpperCase()}
+                  </div>
+                )}
               </div>
-            ) : topUsers.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <p className="text-gray-600">No contributors yet. Be the first!</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="divide-y divide-gray-200">
-                  {topUsers.map((user, index) => (
-                    <div
-                      key={user._id}
-                      className={`p-6 flex items-center space-x-4 ${
-                        index < 3 ? "bg-gradient-to-r from-yellow-50 to-white" : ""
-                      }`}
-                    >
-                      {/* Rank */}
-                      <div className="flex-shrink-0 w-12 text-center">
-                        {index === 0 && (
-                          <Trophy className="h-8 w-8 text-yellow-500 mx-auto" />
-                        )}
-                        {index === 1 && (
-                          <Medal className="h-8 w-8 text-gray-400 mx-auto" />
-                        )}
-                        {index === 2 && (
-                          <Award className="h-8 w-8 text-orange-600 mx-auto" />
-                        )}
-                        {index > 2 && (
-                          <span className="text-2xl font-bold text-gray-400">
-                            {index + 1}
-                          </span>
-                        )}
-                      </div>
+              <p className="font-semibold text-white text-lg truncate">
+                {leaderboard[0].name || leaderboard[0].githubUsername}
+              </p>
+              <p className="text-3xl font-bold text-[#00FF41] mt-1">
+                {leaderboard[0].totalPoints.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-400">points</p>
+            </div>
 
-                      {/* User Info */}
-                      <div className="flex-1 flex items-center space-x-3">
-                        {user.image ? (
-                          <img
-                            src={user.image}
-                            alt={user.name || "User"}
-                            className="h-12 w-12 rounded-full"
-                          />
-                        ) : (
-                          <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                            {(user.name || user.githubUsername || "?")[0].toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {user.name || user.githubUsername}
-                          </p>
-                          {user.githubUsername && (
-                            <p className="text-sm text-gray-600">@{user.githubUsername}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-yellow-600">
-                          {user.totalEarnings}
-                        </p>
-                        <p className="text-sm text-gray-600">points</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {user.totalPRsSubmitted} PRs
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* Third Place */}
+            <div className="bg-[#111111] border border-[#222222] rounded-xl p-6 text-center order-2">
+              <Award className="h-8 w-8 text-orange-400 mx-auto mb-3" />
+              <div className="relative inline-block mb-3">
+                {(leaderboard[2].image || leaderboard[2].avatar_url) ? (
+                  <img
+                    src={leaderboard[2].image || leaderboard[2].avatar_url}
+                    alt={leaderboard[2].name || "User"}
+                    className="h-16 w-16 rounded-full mx-auto"
+                  />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-orange-600/20 flex items-center justify-center text-orange-400 font-bold text-xl mx-auto">
+                    {(leaderboard[2].name || leaderboard[2].githubUsername || "?")[0].toUpperCase()}
+                  </div>
+                )}
               </div>
+              <p className="font-semibold text-white truncate">
+                {leaderboard[2].name || leaderboard[2].githubUsername}
+              </p>
+              <p className="text-2xl font-bold text-orange-400 mt-1">
+                {leaderboard[2].totalPoints.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-500">points</p>
+            </div>
+          </div>
+        )}
+
+        {/* Full Leaderboard */}
+        <div className="bg-[#111111] border border-[#222222] rounded-xl overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#222222] flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-[#00FF41]" />
+            <h2 className="text-lg font-semibold text-white">Rankings</h2>
+            {period !== "all" && (
+              <span className="ml-2 px-2 py-0.5 bg-[#222222] text-gray-400 text-xs rounded-full flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {period === "week" ? "This Week" : "This Month"}
+              </span>
             )}
           </div>
 
-          {/* AI Agent Stats */}
-          <div>
-            <div className="flex items-center space-x-2 mb-6">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-              <h2 className="text-2xl font-bold text-gray-900">AI Agent Performance</h2>
+          {!leaderboard ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00FF41] mx-auto"></div>
+              <p className="mt-4 text-gray-400">Loading leaderboard...</p>
             </div>
+          ) : leaderboard.length === 0 ? (
+            <div className="p-8 text-center">
+              <Trophy className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-400">No contributors yet for this period.</p>
+              <p className="text-sm text-gray-500 mt-1">Be the first to contribute and earn points!</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#222222]">
+              {leaderboard.map((user: any, index: number) => {
+                const TierIcon = tierIcons[(user.tier as keyof typeof tierIcons) || "builder"];
+                const tierColor = tierColors[(user.tier as keyof typeof tierColors) || "builder"];
 
-            {!agentStats ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              </div>
-            ) : agentStats.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <p className="text-gray-600">No agent data yet.</p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="divide-y divide-gray-200">
-                  {agentStats.map((agentStat, index) => (
-                    <div key={agentStat.agent._id} className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-lg font-bold text-gray-400">
-                              #{index + 1}
-                            </span>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {agentStat.agent.name}
-                            </h3>
-                          </div>
-                          {agentStat.agent.description && (
-                            <p className="text-sm text-gray-600 mt-1">
-                              {agentStat.agent.description}
-                            </p>
-                          )}
-                        </div>
-                        <div className="ml-4 text-right">
-                          <p className="text-2xl font-bold text-green-600">
-                            {agentStat.stats.successRate}%
-                          </p>
-                          <p className="text-xs text-gray-600">success rate</p>
-                        </div>
-                      </div>
-
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-4 gap-4 mt-4">
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-gray-900">
-                            {agentStat.stats.totalPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">Total PRs</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-green-600">
-                            {agentStat.stats.mergedPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">Merged</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-red-600">
-                            {agentStat.stats.rejectedPRs}
-                          </p>
-                          <p className="text-xs text-gray-600">Rejected</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-bold text-yellow-600">
-                            {agentStat.stats.totalBountiesWon}
-                          </p>
-                          <p className="text-xs text-gray-600">Points Won</p>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      {agentStat.stats.totalPRs > 0 && (
-                        <div className="mt-4">
-                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-green-500"
-                              style={{
-                                width: `${(agentStat.stats.mergedPRs / agentStat.stats.totalPRs) * 100}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
+                return (
+                  <div
+                    key={user._id}
+                    className={`p-4 flex items-center space-x-4 hover:bg-[#1a1a1a] transition-colors ${
+                      index < 3 ? "bg-gradient-to-r from-[#00FF41]/5 to-transparent" : ""
+                    }`}
+                  >
+                    {/* Rank */}
+                    <div className="flex-shrink-0 w-10 text-center">
+                      {index === 0 && (
+                        <span className="text-xl font-bold text-[#00FF41]">1</span>
+                      )}
+                      {index === 1 && (
+                        <span className="text-xl font-bold text-gray-400">2</span>
+                      )}
+                      {index === 2 && (
+                        <span className="text-xl font-bold text-orange-400">3</span>
+                      )}
+                      {index > 2 && (
+                        <span className="text-lg font-medium text-gray-500">
+                          {index + 1}
+                        </span>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+
+                    {/* User Info */}
+                    <div className="flex-1 flex items-center space-x-3 min-w-0">
+                      {(user.image || user.avatar_url) ? (
+                        <img
+                          src={user.image || user.avatar_url}
+                          alt={user.name || "User"}
+                          className="h-10 w-10 rounded-full flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-[#222222] flex items-center justify-center text-gray-400 font-bold flex-shrink-0">
+                          {(user.name || user.githubUsername || "?")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white truncate">
+                          {user.name || user.githubUsername}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                          <TierIcon className={`h-3.5 w-3.5 ${tierColor}`} />
+                          <span className={`text-xs capitalize ${tierColor}`}>
+                            {user.tier || "builder"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Points */}
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xl font-bold text-[#00FF41]">
+                        {user.totalPoints.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500">points</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-gray-900 mb-2">How Rankings Work</h3>
-          <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-            <li>Contributors are ranked by total bounty points earned</li>
-            <li>AI agents are ranked by success rate (merged PRs / total PRs)</li>
-            <li>Only approved and merged PRs count towards rankings</li>
-            <li>Rankings update in real-time as new PRs are submitted and reviewed</li>
-          </ul>
+        <div className="mt-8 bg-[#111111] border border-[#222222] rounded-xl p-6">
+          <h3 className="font-semibold text-white mb-3">How Points Work</h3>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-900/30 rounded-lg">
+                <Zap className="h-5 w-5 text-green-400" />
+              </div>
+              <div>
+                <p className="font-medium text-white">50 pts</p>
+                <p className="text-gray-400">Merged PR</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-900/30 rounded-lg">
+                <Zap className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="font-medium text-white">30 pts</p>
+                <p className="text-gray-400">Issue Resolved</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-900/30 rounded-lg">
+                <Zap className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="font-medium text-white">20 pts</p>
+                <p className="text-gray-400">Feedback Accepted</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-gray-500 text-sm mt-4">
+            Points are awarded when project owners verify your contributions.
+          </p>
         </div>
       </div>
     </div>
   );
 }
-
